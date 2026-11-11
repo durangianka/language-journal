@@ -200,3 +200,17 @@ Scope: the brief's Stage 1 (required) plus one optional Stage 2 slice. Each deci
 - **Chosen:** Next.js, as recorded in D-023. No further change.
 - **Why:** One full-stack app, one deployable, and the owner's standard stack.
 - **Trade-off:** Stated in D-023 and to be stated in the README.
+
+## D-029: No authentication until deployment or a second user
+- **Question:** Should the app have login?
+- **Chosen:** No. The app runs locally for one person. Authentication is added before any deployment or any second user.
+- **Why:** The brief allows "no authentication". Sessions, password handling and auth tests add review surface without helping the Stage 1 loop.
+- **Trade-off:** Anyone with access to the running machine can read the journal. Acceptable locally, not on a public URL.
+- **Trigger to revisit:** the first deployment, or the first second user. At that point, every page, server action, route handler and API must sit behind auth. The users table is created by the auth library's generator, not written by hand.
+
+## D-030: Graphify maps the codebase after every merge
+- **Question:** How do agents avoid spending tokens rediscovering the code?
+- **Chosen:** Graphify builds a knowledge graph of the repository (which files define and use which). It is regenerated after every merge into `main`, by a git post-merge hook. Its output folder is gitignored.
+- **Why:** An agent that can query "what touches this function" reads fewer files, which saves tokens and avoids wrong edits. Post-merge is the trigger that matches "we merged", and avoids slowing every commit the way a pre-commit hook would.
+- **Trade-off:** The graph is per machine, so each clone regenerates it. The hook only runs on pulls that bring merges. A stale graph is possible until the next merge.
+- **Trigger to revisit:** if the graph starts sending code to a hosted service, the decision is re-taken (see the egress check in the PR).
