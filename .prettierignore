@@ -1,0 +1,9 @@
+pnpm-lock.yaml
+drizzle/
+.next/
+next-env.d.ts
+graphify-out/
+.env*
+
+# Maintained by the project owner.
+DECISIONS.md
