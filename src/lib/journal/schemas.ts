@@ -1,10 +1,12 @@
 import { z } from "zod";
+import { levels } from "../../config/domain";
+import { locales } from "../../config/locales";
 
 export const idSchema = z.uuid();
 
 export const createJournalSchema = z.strictObject({
-  language: z.enum(["en", "es", "it"]),
-  level: z.enum(["new", "basic", "intermediate", "advanced"]),
+  language: z.enum(locales),
+  level: z.enum(levels),
   focus: z.array(z.string()).max(3).default([]),
 });
 

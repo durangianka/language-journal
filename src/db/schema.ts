@@ -10,13 +10,11 @@ import {
   uuid,
 } from "drizzle-orm/pg-core";
 
-export const languageEnum = pgEnum("language", ["en", "es", "it"]);
-export const levelEnum = pgEnum("level", [
-  "new",
-  "basic",
-  "intermediate",
-  "advanced",
-]);
+import { levels } from "../config/domain";
+import { locales } from "../config/locales";
+
+export const languageEnum = pgEnum("language", locales);
+export const levelEnum = pgEnum("level", levels);
 
 export const journals = pgTable(
   "journals",

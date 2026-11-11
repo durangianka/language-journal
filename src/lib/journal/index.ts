@@ -16,12 +16,21 @@ export type { CreateEntryInput, CreateJournalInput } from "./schemas";
 export type { Entry, Journal } from "./types";
 
 function toJournal(row: typeof journals.$inferSelect): Journal {
-  return { ...row, createdAt: row.createdAt.toISOString() };
+  return {
+    id: row.id,
+    language: row.language,
+    level: row.level,
+    focus: row.focus,
+    createdAt: row.createdAt.toISOString(),
+  };
 }
 
 function toEntry(row: typeof entries.$inferSelect): Entry {
   return {
-    ...row,
+    id: row.id,
+    journalId: row.journalId,
+    body: row.body,
+    entryDate: row.entryDate,
     createdAt: row.createdAt.toISOString(),
     updatedAt: row.updatedAt.toISOString(),
   };
