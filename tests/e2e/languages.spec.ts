@@ -35,6 +35,15 @@ for (const language of [
     await expect(page.getByRole("heading", { level: 1 })).toHaveText(language.heading);
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
 
+    const targets = page.locator('a[href], button, input:not([type="hidden"]), select, textarea, summary, [role="button"], [role="link"], [tabindex]:not([tabindex="-1"]), [contenteditable="true"]');
+    for (const target of await targets.all()) {
+      const box = await target.boundingBox();
+      expect(box, await target.evaluate((element) => element.outerHTML)).not.toBeNull();
+      if (!box) throw new Error("Interactive target has no bounding box");
+      expect(box.width).toBeGreaterThanOrEqual(44);
+      expect(box.height).toBeGreaterThanOrEqual(44);
+    }
+
     await page.keyboard.press("Tab");
     await page.keyboard.press("Tab");
     const firstFlag = page.getByRole("button").first();
