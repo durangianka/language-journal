@@ -226,3 +226,11 @@ Scope: the brief's Stage 1 (required) plus one optional Stage 2 slice. Each deci
 - **Chosen:** Phone width (375px) first, touch targets at least 44px tall, and touch emulation in browser tests. Desktop layouts are added after the phone layout works.
 - **Why:** The owner wants to use the app on a phone. Designing mobile first avoids retrofitting touch behaviour later.
 - **Trade-off:** Desktop-only refinements come later and need their own review.
+
+## D-033: Focus areas are a level-based steering input for the AI
+- **Question:** How many focus areas can a learner pick, and what do they do?
+- **Chosen:** A focus area is a steering input. It tells the AI what to prioritise, for example grammar. The number a learner may choose depends on the level: New = 1, Basic = up to 2, Intermediate = up to 3, Advanced = up to 3. Zero is always allowed.
+- **Why:** Beginners get a light setup. More advanced learners can name more priorities. Focus steers the feedback. It does not hide errors.
+- **Trade-off:** The numbers are a judgement. They live in one config file, so the owner can change them without a redesign.
+- **Separate setting:** corrections shown per entry stay at three. This is independent of focus.
+- **Supersedes:** the focus limits in D-018 (up to three) and D-024 (one or two).
