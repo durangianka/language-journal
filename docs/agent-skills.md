@@ -35,7 +35,7 @@ the diff before committing. Do not run an unattended update.
 | Option                                  | Current library docs                                                | Setup and trade-off                                                                                              |
 | --------------------------------------- | ------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------- |
 | Skill only                              | Cannot retrieve docs alone                                          | Lightweight instructions, but depends on pre-existing MCP tools                                                  |
-| MCP for Claude Code and Codex, selected | Resolves libraries and queries docs through the same hosted service | Project configs plus lookup skill; requires connectivity and authentication                                      |
+| MCP for Claude Code and Codex, selected | Resolves libraries and queries docs through the same hosted service | User-level setup plus lookup skill; requires connectivity and authentication                                     |
 | Context7 CLI                            | `npx ctx7@latest library` and `docs` query the service              | Useful in shells, but adds package execution and CLI authentication without benefiting the selected MCP workflow |
 
 Use MCP for Next.js, Drizzle ORM, Vercel AI SDK, Zod and Playwright even when no
@@ -43,21 +43,7 @@ library-specific skill is installed. Resolve the library name first, prefer the
 official source and matching version, then query one concept at a time. Coverage
 and individual library results still need checking when used.
 
-The project configurations are `.mcp.json` for Claude Code and
-`.codex/config.toml` for Codex. Obtain a key from the
-[Context7 dashboard](https://context7.com/dashboard?tab=settings), set
-`CONTEXT7_API_KEY` in the environment that launches each agent, then restart it.
-Never put the value in a repository file, `.env`, command history or PR text.
-Claude expands `Bearer ${CONTEXT7_API_KEY}`; Codex reads the same variable with
-`bearer_token_env_var`. Codex must trust the project to load project config.
-Claude may request approval to use the project's MCP server.
-
-No key was created or copied. These project connections have not been tested in
-fresh Claude Code or Codex sessions. The already-connected Context7 tool worked
-during research, which does not verify these new configurations. See the
-[upstream Context7 clients guide](https://github.com/upstash/context7/tree/master/docs/clients),
-[Claude MCP environment expansion](https://code.claude.com/docs/en/mcp#environment-variable-expansion-in-mcpjson)
-and [Codex configuration reference](https://developers.openai.com/codex/config-reference/).
+Context7 is set up per user with `npx ctx7 setup`, and the key lives in the environment, not in the repo.
 
 ## Review and local adaptations
 
@@ -99,8 +85,6 @@ rejected as documentation access strategies for the reasons in the table.
   supabase-postgres-best-practices/ # SKILL.md and references
   vercel-react-best-practices/      # SKILL.md, compiled AGENTS.md and rules
 .claude/skills/                     # Claude Code, same four directories and files
-.codex/config.toml                 # Context7 remote MCP, environment reference
-.mcp.json                          # Context7 remote MCP, environment reference
 CLAUDE.md                          # Only @AGENTS.md
 skills-lock.json
 ```
