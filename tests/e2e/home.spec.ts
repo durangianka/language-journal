@@ -5,7 +5,5 @@ test("the home page loads", async ({ page }) => {
 
   expect(response?.status()).toBe(200);
   await expect(page).toHaveTitle("Language Journal");
-  await expect(
-    page.getByRole("heading", { name: "Language Journal", level: 1 }),
-  ).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Language Journal", level: 1 })).toBeVisible();
 });

@@ -37,7 +37,11 @@ Postgres data persists in a named Docker volume. `docker compose down` stops it.
 
 ## Checks
 
+Run `pnpm format` to format files. Prettier uses its defaults with a print width of 100.
+ESLint keeps the Next.js Core Web Vitals and TypeScript rules, and fails on warnings.
+
 ```sh
+pnpm format:check
 pnpm lint
 pnpm typecheck
 pnpm build

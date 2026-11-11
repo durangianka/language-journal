@@ -1,19 +1,9 @@
 import { sql } from "drizzle-orm";
-import {
-  check,
-  date,
-  index,
-  pgEnum,
-  pgTable,
-  text,
-  timestamp,
-  uuid,
-} from "drizzle-orm/pg-core";
+import { check, date, index, pgEnum, pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core";
 
-import { levels } from "../config/domain";
-import { locales } from "../config/locales";
+import { languages, levels } from "../config/domain";
 
-export const languageEnum = pgEnum("language", locales);
+export const languageEnum = pgEnum("language", languages);
 export const levelEnum = pgEnum("level", levels);
 
 export const journals = pgTable(
@@ -22,12 +12,13 @@ export const journals = pgTable(
     id: uuid("id").defaultRandom().primaryKey(),
     language: languageEnum("language").notNull(),
     level: levelEnum("level").notNull(),
-    focus: text("focus").array().notNull().default(sql`'{}'::text[]`),
+    focus: text("focus")
+      .array()
+      .notNull()
+      .default(sql`'{}'::text[]`),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
-  (table) => [
-    check("journals_focus_max_three", sql`cardinality(${table.focus}) <= 3`),
-  ],
+  (table) => [check("journals_focus_max_three", sql`cardinality(${table.focus}) <= 3`)],
 );
 
 export const entries = pgTable(
