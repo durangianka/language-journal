@@ -20,6 +20,7 @@ const choiceClass =
 export function JournalForm({ t }: { t: Dictionary }) {
   const router = useRouter();
   const [language, setLanguage] = useState<Locale | null>(null);
+  const [selectedLevel, setSelectedLevel] = useState<(typeof levels)[number] | null>(null);
   const [focus, setFocus] = useState<string[]>([]);
   const [state, action, pending] = useActionState<ActionResult | null, FormData>(
     async (_previous, form) => {
@@ -32,7 +33,12 @@ export function JournalForm({ t }: { t: Dictionary }) {
   const errors = state && !state.success ? state.errors : {};
 
   return (
-    <form action={action} className="flex flex-col gap-8">
+    <form
+      action={action}
+      className="flex flex-col gap-8"
+      // React resets radios even after a resolved failure. Success navigates away.
+      onReset={(event) => event.preventDefault()}
+    >
       <fieldset className="flex flex-col gap-3" aria-describedby="language-error">
         <legend className="mb-3 font-semibold">{t.chooseLanguage}</legend>
         {languages.map((value) => {
@@ -70,6 +76,8 @@ export function JournalForm({ t }: { t: Dictionary }) {
               value={level}
               required
               aria-label={t[level]}
+              checked={selectedLevel === level}
+              onChange={() => setSelectedLevel(level)}
             />
             <span className="flex flex-col gap-1">
               <span className="font-medium">{t[level]}</span>

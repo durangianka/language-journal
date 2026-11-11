@@ -140,3 +140,60 @@ test("invalid and missing journals show the not-found screen", async ({ page }) 
     ).toBeVisible();
   }
 });
+
+async function failNextAction(page: Page) {
+  let failed = false;
+  await page.route("**/journals/**", async (route) => {
+    if (failed || !route.request().headers()["next-action"]) {
+      await route.continue();
+      return;
+    }
+    failed = true;
+    // Return a resolved Server Action failure so React performs its form reset.
+    await route.fulfill({
+      contentType: "text/x-component",
+      body: '0:{"a":{"success":false,"errors":{"form":"saveFailed"}}}\n',
+    });
+  });
+}
+
+test("failed actions keep journal language and level and entry fields for retry", async ({
+  page,
+}) => {
+  await page.goto("/journals/new");
+  const language = page.getByRole("radio", { name: "Spanish", exact: true });
+  const level = page.getByRole("radio", { name: "Basic · A2", exact: true });
+  await language.check();
+  await level.check();
+  await page.getByRole("button", { name: "Travel", exact: true }).tap();
+  await failNextAction(page);
+  await page.getByRole("button", { name: "Create journal", exact: true }).tap();
+  await expect(page.locator("#form-error")).toHaveText(
+    "We could not save this. Your writing is still here. Please try again.",
+  );
+  await expect(language).toBeChecked();
+  await expect(level).toBeChecked();
+  await expect(page.getByRole("button", { name: "Travel", exact: true })).toHaveAttribute(
+    "aria-pressed",
+    "true",
+  );
+  await page.getByRole("button", { name: "Create journal", exact: true }).tap();
+  await expect(page).toHaveURL(/\/journals\/[a-f0-9-]+$/);
+  createdJournalId = new URL(page.url()).pathname.split("/")[2];
+  await expect(page.getByRole("heading", { level: 1 })).toContainText("Spanish");
+  await expect(page.locator("main:visible")).toContainText("Basic · A2");
+
+  await page.getByRole("link", { name: "New entry", exact: true }).tap();
+  const date = page.getByLabel("Entry date", { exact: true });
+  const body = page.getByLabel("Your entry", { exact: true });
+  await date.fill("2026-11-09");
+  await body.fill("Hoy escribo en español.");
+  await failNextAction(page);
+  await page.getByRole("button", { name: "Save entry", exact: true }).tap();
+  await expect(page.locator("#form-error")).toBeVisible();
+  await expect(date).toHaveValue("2026-11-09");
+  await expect(body).toHaveValue("Hoy escribo en español.");
+  await page.getByRole("button", { name: "Save entry", exact: true }).tap();
+  await expect(page.getByRole("status")).toHaveText("New entry savedNovember 9, 2026");
+  await expect(page.locator("main:visible li")).toContainText("Hoy escribo en español.");
+});
