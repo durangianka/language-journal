@@ -8,7 +8,19 @@ export default async function Home() {
     <main className="mx-auto flex w-full max-w-5xl flex-1 flex-col items-start justify-center gap-4 px-4 py-16 sm:px-6">
       <h1 className="text-3xl font-semibold tracking-tight">{t.appName}</h1>
       <p className="text-muted-foreground">{t.homeDescription}</p>
-      <Link href="/journals/new" prefetch={false} className={buttonVariants({ className: "min-h-11 min-w-11" })}>{t.newJournal}</Link>
+      <Link
+        href="/journals/new"
+        prefetch={false}
+        className={buttonVariants({ className: "min-h-11 min-w-11" })}
+      >
+        {t.newJournal}
+      </Link>
+      <Link
+        href="/journals"
+        className={buttonVariants({ variant: "outline", className: "min-h-11 min-w-11" })}
+      >
+        {t.journals}
+      </Link>
     </main>
   );
 }

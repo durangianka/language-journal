@@ -10,7 +10,7 @@ export const createJournalSchema = z.strictObject({
   focus: z.array(z.string()).max(3).default([]),
 });
 
-function today(): string {
+export function today(): string {
   const now = new Date();
   return [
     now.getFullYear().toString().padStart(4, "0"),
