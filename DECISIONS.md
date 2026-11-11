@@ -101,3 +101,61 @@ Append-only. Each entry: the question, what was chosen, why, and the trade-off a
 - **Chosen:** Set `agentRules: false` and keep a short repository-owned `AGENTS.md` pointing to the version-matched documentation bundled with Next.js. Leave agent feedback disabled.
 - **Why:** The generator's managed prose conflicts with this repository's punctuation rule, and automatic rewrites would create unnecessary working-tree changes.
 - **Trade-off:** Future maintainers update the short instructions themselves when the documentation workflow changes.
+
+---
+
+## Product decisions (2026-11-11)
+
+Scope: the brief's Stage 1 (required) plus one optional Stage 2 slice. Each decision below was made with the owner on 2026-11-11.
+
+## D-015: The user and the core loop
+- **Question:** Who is the user, and what do they do?
+- **Chosen:** One adult learner who practises one language. They write a short entry, get three explained corrections plus a corrected version, save it, and later reopen past entries.
+- **Why:** This is the loop the brief defines, and it is the only path the owner can judge from their own experience.
+- **Trade-off:** No speaking, streaks, sharing or social features.
+
+## D-016: Build in two slices, not one
+- **Question:** How much to build, and in what order?
+- **Chosen:** Slice 1 is the full Stage 1 loop end to end. Slice 2 is a simple review view that counts recurring mistake categories. Everything else is out.
+- **Why:** Slice 1 is complete and demonstrable early. Slice 2 is the one Stage 2 item that changes the review experience, and it stays small.
+- **Trade-off:** No progress charts, no AI tools, no streaks.
+
+## D-017: Spanish first, Italian by configuration
+- **Question:** Which languages ship?
+- **Chosen:** Spanish is the first language. Italian is added through configuration, not code. English is out of scope.
+- **Why:** One language gives one set of error categories to tune. The owner can judge Spanish and Italian corrections directly.
+- **Trade-off:** A narrower demo. The data model stays language-agnostic, so adding a language does not change the schema.
+
+## D-018: Four setup questions per journal
+- **Question:** What does the app ask when a journal is created?
+- **Chosen:** Language. Level (new, basic, intermediate, advanced, with "not sure"). Main intention (one choice from a fixed list). Focus areas (up to three).
+- **Why:** These four answers change the feedback. Research supports focused feedback and broad level bands.
+- **Trade-off:** Self-reported level can be wrong. Each feedback response states the level it assumed, so the learner can correct it.
+
+## D-019: Feedback is three explained corrections plus a corrected version
+- **Question:** What does feedback look like?
+- **Chosen:** A corrected full text. Up to three corrections, each with the original span, the fix, a category, and a one-line explanation pitched at the learner's level.
+- **Why:** A learner can act on three items. The corrected text shows what good looks like.
+- **Trade-off:** Other errors are hidden. A "show all" option can come later.
+
+## D-020: AI does one structured call, the app controls everything else
+- **Question:** Should the model call tools?
+- **Chosen:** Stage 1 is a single structured call, validated with Zod. The app performs all reads and writes. Read-only tools are deferred to Stage 2.
+- **Why:** Each step is testable, and the owner can explain each one. The model never writes to the database.
+- **Trade-off:** Less "agentic" than a tool loop. The provider interface leaves room to add tools later.
+
+## D-021: OpenAI gpt-6-luna behind a provider interface
+- **Question:** Which model for the build?
+- **Chosen:** OpenAI `gpt-6-luna` with structured output. Behind an interface, so Mistral or Groq can be swapped in.
+- **Why:** About $0.43 per 1,000 analyses, well inside the $5 budget, and it supports strict JSON schemas.
+- **Trade-off:** OpenAI keeps abuse logs for up to 30 days. Use only the owner's own entries until the data terms are reviewed.
+
+## D-022: The entry is saved before feedback
+- **Question:** What happens if the AI fails?
+- **Chosen:** The entry saves first. Feedback has a status of pending, ready or failed, with a retry action.
+- **Why:** The learner never loses writing to a provider error.
+- **Trade-off:** The database holds entries with no feedback, and the UI must show that state.
+
+## Still open
+- Time budget for the exercise.
+- Whether the take-home deadline is confirmed with the employer.
