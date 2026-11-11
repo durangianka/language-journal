@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { levels } from "../../config/domain";
 import { localeSchema } from "../../config/locales";
+import { today } from "./dates";
 
 export const idSchema = z.uuid();
 
@@ -9,15 +10,6 @@ export const createJournalSchema = z.strictObject({
   level: z.enum(levels),
   focus: z.array(z.string()).max(3).default([]),
 });
-
-export function today(): string {
-  const now = new Date();
-  return [
-    now.getFullYear().toString().padStart(4, "0"),
-    (now.getMonth() + 1).toString().padStart(2, "0"),
-    now.getDate().toString().padStart(2, "0"),
-  ].join("-");
-}
 
 export const createEntrySchema = z.strictObject({
   journalId: idSchema,

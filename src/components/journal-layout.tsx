@@ -1,7 +1,7 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { buttonVariants } from "@/components/ui/button";
-import type { Locale } from "@/config/locales";
+export { formatDate } from "@/lib/journal/dates";
 
 export function JournalLayout({
   title,
@@ -33,11 +33,5 @@ export function JournalLink({ href, children }: { href: string; children: ReactN
     <Link href={href} className={buttonVariants({ className: "min-h-11 w-full" })}>
       {children}
     </Link>
-  );
-}
-
-export function formatDate(value: string, locale: Locale) {
-  return new Intl.DateTimeFormat(locale, { dateStyle: "long", timeZone: "UTC" }).format(
-    new Date(value.length === 10 ? `${value}T00:00:00Z` : value),
   );
 }

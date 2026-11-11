@@ -1,6 +1,7 @@
 ﻿import "dotenv/config";
 import postgres from "postgres";
 import { expect, test, type Page } from "@playwright/test";
+import { today } from "../../src/lib/journal/dates";
 
 test.use({ viewport: { width: 375, height: 812 }, hasTouch: true, isMobile: true });
 
@@ -65,15 +66,7 @@ test("creates a journal and saves an entry on a 375px touch screen", async ({ pa
   await page.screenshot({ path: "docs/screenshots/journal-pages/journal.png", fullPage: true });
   await page.getByRole("link", { name: "New entry", exact: true }).tap();
   const date = page.getByLabel("Entry date", { exact: true });
-  const today = await page.evaluate(() => {
-    const now = new Date();
-    return [
-      now.getFullYear(),
-      String(now.getMonth() + 1).padStart(2, "0"),
-      String(now.getDate()).padStart(2, "0"),
-    ].join("-");
-  });
-  await expect(date).toHaveValue(today);
+  await expect(date).toHaveValue(today());
   await date.fill("2026-11-10");
   await page
     .getByLabel("Your entry", { exact: true })
@@ -140,6 +133,48 @@ test("invalid and missing journals show the not-found screen", async ({ page }) 
     ).toBeVisible();
   }
 });
+
+for (const { timezoneId, instant, day, label } of [
+  {
+    timezoneId: "America/Los_Angeles",
+    instant: "2026-01-02T00:30:00Z",
+    day: "2026-01-01",
+    label: "January 1, 2026",
+  },
+  {
+    timezoneId: "Pacific/Kiritimati",
+    instant: "2026-01-01T23:30:00Z",
+    day: "2026-01-02",
+    label: "January 2, 2026",
+  },
+]) {
+  test.describe(timezoneId, () => {
+    test.use({ timezoneId });
+
+    test("defaults to the device calendar day and preserves it after save and reload", async ({
+      page,
+    }) => {
+      await page.clock.setFixedTime(new Date(instant));
+      await page.goto("/journals/new");
+      await page.getByRole("radio", { name: "English", exact: true }).check();
+      await page.getByRole("radio", { name: "New · A1", exact: true }).check();
+      await page.getByRole("button", { name: "Create journal", exact: true }).tap();
+      await expect(page).toHaveURL(/\/journals\/[a-f0-9-]+$/);
+      createdJournalId = new URL(page.url()).pathname.split("/")[2];
+      await page.getByRole("link", { name: "New entry", exact: true }).tap();
+      await expect(page.getByLabel("Entry date", { exact: true })).toHaveValue(day);
+      await page.reload();
+      await expect(page.getByLabel("Entry date", { exact: true })).toHaveValue(day);
+      await page.getByLabel("Your entry", { exact: true }).fill("A local calendar day.");
+      await page.getByRole("button", { name: "Save entry", exact: true }).tap();
+      await expect(page.getByRole("status")).toHaveText(`New entry saved${label}`);
+      await expect(page.locator("main:visible time")).toHaveText(label);
+      await expect(page.locator("main:visible time")).toHaveAttribute("datetime", day);
+      await page.reload();
+      await expect(page.locator("main:visible time")).toHaveText(label);
+    });
+  });
+}
 
 async function failNextAction(page: Page) {
   let failed = false;

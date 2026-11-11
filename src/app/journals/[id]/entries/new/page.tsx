@@ -3,7 +3,7 @@ import { EntryForm } from "@/components/entry-form";
 import { JournalLayout } from "@/components/journal-layout";
 import { getDictionary } from "@/i18n/server";
 import { getJournal } from "@/lib/journal";
-import { idSchema, today } from "@/lib/journal/schemas";
+import { idSchema } from "@/lib/journal/schemas";
 
 export default async function NewEntryPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -12,7 +12,7 @@ export default async function NewEntryPage({ params }: { params: Promise<{ id: s
   if (!journal) notFound();
   return (
     <JournalLayout title={t.newEntry} back={`/journals/${id}`} backLabel={t.backToJournal}>
-      <EntryForm journalId={id} initialDate={today()} t={t} />
+      <EntryForm journalId={id} t={t} />
     </JournalLayout>
   );
 }

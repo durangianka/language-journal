@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useActionState, useState, useSyncExternalStore } from "react";
 import { useRouter } from "next/navigation";
 import { createEntryAction } from "@/app/journals/actions";
 import { FieldError } from "@/components/field-error";
@@ -8,19 +8,18 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import type { Dictionary } from "@/i18n/types";
 import type { ActionResult } from "@/lib/journal/action-input";
+import { today } from "@/lib/journal/dates";
 
-export function EntryForm({
-  journalId,
-  initialDate,
-  t,
-}: {
-  journalId: string;
-  initialDate: string;
-  t: Dictionary;
-}) {
+const subscribe = () => () => {};
+const serverDate = () => "";
+
+export function EntryForm({ journalId, t }: { journalId: string; t: Dictionary }) {
   const router = useRouter();
   const [body, setBody] = useState("");
-  const [entryDate, setEntryDate] = useState(initialDate);
+  // The server cannot know the device timezone. Leave the date blank until hydration.
+  const localToday = useSyncExternalStore(subscribe, today, serverDate);
+  const [selectedDate, setEntryDate] = useState<string | null>(null);
+  const entryDate = selectedDate ?? localToday;
   const [state, action, pending] = useActionState<ActionResult | null, FormData>(
     async (_previous, form) => {
       const result = await createEntryAction(form);

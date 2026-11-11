@@ -1,11 +1,25 @@
 import { afterEach, describe, expect, test, vi } from "vitest";
-import {
-  createEntrySchema,
-  createJournalSchema,
-  idSchema,
-} from "../../src/lib/journal/schemas";
+import { formatDate, today } from "../../src/lib/journal/dates";
+import { createEntrySchema, createJournalSchema, idSchema } from "../../src/lib/journal/schemas";
 
 const journalId = "a898dc71-df35-425f-9ed1-6e79019cb1e7";
+
+describe("calendar days", () => {
+  afterEach(() => vi.useRealTimers());
+
+  test("today returns the local calendar day near midnight", () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date(2026, 0, 2, 0, 30));
+    expect(today()).toBe("2026-01-02");
+    vi.setSystemTime(new Date(2026, 0, 2, 23, 30));
+    expect(today()).toBe("2026-01-02");
+  });
+
+  test("displays the saved calendar day without shifting it", () => {
+    expect(formatDate("2026-01-02", "en")).toBe("January 2, 2026");
+    expect(formatDate("2024-02-29", "en")).toBe("February 29, 2024");
+  });
+});
 
 describe("idSchema", () => {
   test("accepts UUIDs", () => {
@@ -68,19 +82,32 @@ describe("createEntrySchema", () => {
     expect(createEntrySchema.parse({ journalId, body: "Tomorrow" }).entryDate).toBe("2026-01-03");
   });
 
-  test.each(["", " ", "\t\r\n", "\u00a0", "\u2003", "a".repeat(5001), "😀".repeat(5001), null, 123])(
-    "rejects invalid body (%#)",
-    (body) => {
-      expect(createEntrySchema.safeParse({ journalId, body }).success).toBe(false);
-    },
-  );
+  test.each([
+    "",
+    " ",
+    "\t\r\n",
+    "\u00a0",
+    "\u2003",
+    "a".repeat(5001),
+    "😀".repeat(5001),
+    null,
+    123,
+  ])("rejects invalid body (%#)", (body) => {
+    expect(createEntrySchema.safeParse({ journalId, body }).success).toBe(false);
+  });
 
-  test.each(["2025-02-29", "2026-02-30", "2026-13-01", "2026-04-31", "2026-1-01", "2026-01-01T00:00:00Z", "", null])(
-    "rejects invalid entry date %j",
-    (entryDate) => {
-      expect(createEntrySchema.safeParse({ journalId, body: "Ciao", entryDate }).success).toBe(false);
-    },
-  );
+  test.each([
+    "2025-02-29",
+    "2026-02-30",
+    "2026-13-01",
+    "2026-04-31",
+    "2026-1-01",
+    "2026-01-01T00:00:00Z",
+    "",
+    null,
+  ])("rejects invalid entry date %j", (entryDate) => {
+    expect(createEntrySchema.safeParse({ journalId, body: "Ciao", entryDate }).success).toBe(false);
+  });
 
   test.each([
     {},
