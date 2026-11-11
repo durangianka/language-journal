@@ -59,3 +59,45 @@ Append-only. Each entry: the question, what was chosen, why, and the trade-off a
 - AI provider. Pilot pending. Candidates: OpenAI `gpt-6-luna`, Mistral `ministral-3b-2512`, Groq `gpt-oss-20b`.
 - Target language for the first version. Candidates: Spanish, Italian, English.
 - Time budget for the exercise.
+
+## D-009: postgres.js as the Node Postgres driver
+- **Date:** 2026-11-11
+- **Question:** Which driver should Drizzle use?
+- **Chosen:** `postgres`, through `drizzle-orm/postgres-js`, with its client reused across development hot reloads.
+- **Why:** postgres.js includes TypeScript types and connection pooling, so the Node app needs one driver package and no separate types package.
+- **Trade-off:** Driver-specific code uses the postgres.js API rather than node-postgres. The deployment runtime remains Node.
+
+## D-010: Local database configuration and an empty schema entry point
+- **Date:** 2026-11-11
+- **Question:** How do Compose and Drizzle share development settings before tables exist?
+- **Chosen:** Compose reads `POSTGRES_USER`, `POSTGRES_PASSWORD`, and `POSTGRES_DB` from `.env`, with local defaults documented in `.env.example`. `DATABASE_URL` configures the application and Drizzle Kit. `dotenv/config` loads `.env` for the standalone Drizzle CLI. Port 5433 binds only to IPv4 loopback, a named volume persists data, and `pg_isready` checks readiness. `src/db/schema.ts` exports no tables and future migrations go in `drizzle/`.
+- **Why:** The CLI and container can start from one example file, and migration tooling has a real schema entry point without inventing domain tables.
+- **Trade-off:** Changing database credentials requires updating `DATABASE_URL` too. Existing volumes retain their original credentials. Migrations are not part of initial setup while the schema is empty.
+
+## D-011: Generated tooling baseline with Node 24 and pnpm 11
+- **Date:** 2026-11-11
+- **Question:** Which runtime and dependency-install settings should a clone use?
+- **Chosen:** Keep the stable Next.js 16.4.6 generator's TypeScript, App Router, `src/`, `@/*`, Tailwind, ESLint and Turbopack defaults. Require Node 24 or newer, align `@types/node` to 24, and pin pnpm 11.6.0 with a committed lockfile. Allow esbuild installation scripts for the test and migration tooling; retain the generator's denied sharp and unrs-resolver build scripts.
+- **Why:** Node 24 is an LTS baseline compatible with the current Vitest runner, and an explicit esbuild permission makes a fresh pnpm install succeed without interactive approval.
+- **Trade-off:** Older Node releases are outside the supported setup. ESLint 9 and some Drizzle Kit transitive packages emit deprecation notices inherited from the upstream tooling.
+
+## D-012: Minimal home page with shadcn defaults and system fonts
+- **Date:** 2026-11-11
+- **Question:** What should be visible before journal features and component selection?
+- **Chosen:** A static Language Journal heading and development placeholder. Initialize shadcn with its default base-nova, neutral theme and Lucide configuration, retain its utilities and styles, and remove the Button that the initializer adds automatically. Use system sans and monospace fonts instead of remote Google Fonts; remove unused generator artwork.
+- **Why:** This proves the app runs, leaves component selection to the separate survey, and avoids font downloads during builds.
+- **Trade-off:** Typography and component selection remain future design work. Next.js App Router supports the original single-page application intent through client-side navigation within one app, with no separate API process.
+
+## D-013: Isolated unit and production browser smoke tests
+- **Date:** 2026-11-11
+- **Question:** How should the scaffold prove both test runners work?
+- **Chosen:** One trivial arithmetic test under `tests/unit/` using Vitest's Node environment, and one Chromium homepage test under `tests/e2e/`. Playwright builds and starts its own production server on `127.0.0.1:3100`, refuses to reuse another server, and checks HTTP status, title and heading. Vitest only discovers the unit directory.
+- **Why:** The smoke tests prove the runners and built app without introducing journal behavior, a database dependency or an AI provider.
+- **Trade-off:** The browser test includes build time and requires a one-time Chromium install. DOM unit testing and broader browser coverage can be added when needed.
+
+## D-014: Keep repository agent instructions under source control
+- **Date:** 2026-11-11
+- **Question:** Should Next.js rewrite the repository's agent instructions?
+- **Chosen:** Set `agentRules: false` and keep a short repository-owned `AGENTS.md` pointing to the version-matched documentation bundled with Next.js. Leave agent feedback disabled.
+- **Why:** The generator's managed prose conflicts with this repository's punctuation rule, and automatic rewrites would create unnecessary working-tree changes.
+- **Trade-off:** Future maintainers update the short instructions themselves when the documentation workflow changes.
