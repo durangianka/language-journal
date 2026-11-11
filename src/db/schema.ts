@@ -1,6 +1,7 @@
 import { sql } from "drizzle-orm";
 import { check, date, index, pgEnum, pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core";
 
+import { maxFocusByLevel } from "../config/focus";
 import { languages, levels } from "../config/domain";
 
 export const languageEnum = pgEnum("language", languages);
@@ -18,7 +19,16 @@ export const journals = pgTable(
       .default(sql`'{}'::text[]`),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
-  (table) => [check("journals_focus_max_three", sql`cardinality(${table.focus}) <= 3`)],
+  (table) => [
+    check(
+      "journals_focus_level_limit",
+      sql`cardinality(${table.focus}) <= CASE ${table.level} ${sql.raw(
+        Object.entries(maxFocusByLevel)
+          .map(([level, limit]) => `WHEN '${level}' THEN ${limit}`)
+          .join(" "),
+      )} END`,
+    ),
+  ],
 );
 
 export const entries = pgTable(

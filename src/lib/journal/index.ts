@@ -38,6 +38,7 @@ function toEntry(row: typeof entries.$inferSelect): Entry {
 
 export async function createJournal(input: CreateJournalInput): Promise<Journal> {
   const values = createJournalSchema.parse(input);
+  // The AI feature will read focus as steering input, preserving the learner's choices.
   const [row] = await db.insert(journals).values(values).returning();
   return toJournal(row);
 }

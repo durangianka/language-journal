@@ -1,0 +1,2 @@
+ALTER TABLE "journals" DROP CONSTRAINT "journals_focus_max_two";--> statement-breakpoint
+ALTER TABLE "journals" ADD CONSTRAINT "journals_focus_level_limit" CHECK (cardinality("journals"."focus") <= CASE "journals"."level" WHEN 'new' THEN 1 WHEN 'basic' THEN 2 WHEN 'intermediate' THEN 3 WHEN 'advanced' THEN 3 END);
