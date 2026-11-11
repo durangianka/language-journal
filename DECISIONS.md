@@ -181,3 +181,22 @@ Scope: the brief's Stage 1 (required) plus one optional Stage 2 slice. Each deci
 
 ## Open
 - Whether the rewrite step is in Stage 1 or a stretch goal.
+
+## D-026: Rewrite step is a stretch goal, not Stage 1 core
+- **Question:** Is the "rewrite and resubmit" step part of Stage 1?
+- **Chosen:** No. Stage 1 is the brief's loop: write, get feedback, save, review. Rewrite is documented in the README as the next step, and built only if the core is complete and tested.
+- **Why:** The brief requires the core loop, and the review says "clarity and correctness over feature completeness". A finished, tested core is worth more than an unfinished extra.
+- **Trade-off:** The learning argument for rewriting is stated but not demonstrated in the demo.
+- **Resolves:** the open item "Whether the rewrite step is in Stage 1".
+
+## D-027: Level cards show CEFR first, with one example certificate
+- **Question:** Which label and which certificate example appear on the level cards?
+- **Chosen:** The CEFR band is the main label (A1, A2, B1–B2, C1–C2), since the owner knows these from Italian schooling. Each card shows one example certificate per language: Cambridge for English, DELE for Spanish, CELI for Italian.
+- **Why:** CEFR is the shared standard in all three languages. Cambridge is the best-known English exam worldwide. DELE is Instituto Cervantes' official Spanish exam. CELI is one of the best-known Italian certificates, and CILS is an equally valid alternative.
+- **Trade-off:** One example per language keeps cards simple, but it doesn't show every provider. Hints stay "about", never a claim of certification.
+
+## D-028: Next.js is final for Stage 1
+- **Question:** Next.js or a separate React single-page app?
+- **Chosen:** Next.js, as recorded in D-023. No further change.
+- **Why:** One full-stack app, one deployable, and the owner's standard stack.
+- **Trade-off:** Stated in D-023 and to be stated in the README.
