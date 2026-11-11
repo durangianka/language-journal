@@ -214,3 +214,15 @@ Scope: the brief's Stage 1 (required) plus one optional Stage 2 slice. Each deci
 - **Why:** An agent that can query "what touches this function" reads fewer files, which saves tokens and avoids wrong edits. Post-merge is the trigger that matches "we merged", and avoids slowing every commit the way a pre-commit hook would.
 - **Trade-off:** The graph is per machine, so each clone regenerates it. The hook only runs on pulls that bring merges. A stale graph is possible until the next merge.
 - **Trigger to revisit:** if the graph starts sending code to a hosted service, the decision is re-taken (see the egress check in the PR).
+
+## D-031: Agents run and maintain the app; the owner reviews, comments and approves
+- **Question:** Who keeps the local app running and up to date?
+- **Chosen:** Agents do the operational work. After each approved merge, an agent pulls `main` into the main checkout, starts the Docker database, applies migrations, and restarts the dev server. The owner reviews pull requests, comments, and approves. Approval means the owner says so in the PR or in chat, and then an agent merges.
+- **Why:** The owner's role is product judgment and review. Manual setup steps would add friction and drift between what was reviewed and what runs.
+- **Trade-off:** The owner depends on the agent's run log to know what is live. Each merge gets a short note in the PR listing what was applied.
+
+## D-032: Mobile first
+- **Question:** Which screen size is designed and tested first?
+- **Chosen:** Phone width (375px) first, touch targets at least 44px tall, and touch emulation in browser tests. Desktop layouts are added after the phone layout works.
+- **Why:** The owner wants to use the app on a phone. Designing mobile first avoids retrofitting touch behaviour later.
+- **Trade-off:** Desktop-only refinements come later and need their own review.
