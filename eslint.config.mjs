@@ -7,6 +7,26 @@ const eslintConfig = defineConfig([
   ...nextVitals,
   ...nextTs,
   prettier,
+  {
+    files: ["src/**/*.ts", "src/**/*.tsx"],
+    rules: {
+      "@typescript-eslint/no-explicit-any": "error",
+      "@typescript-eslint/consistent-type-assertions": ["error", { assertionStyle: "never" }],
+      "no-restricted-syntax": [
+        "error",
+        {
+          selector: "TSAsExpression",
+          message:
+            "Type assertions, including const assertions, are forbidden. Use typed declarations or validation.",
+        },
+        {
+          selector: "TSTypeAssertion",
+          message:
+            "Type assertions, including const assertions, are forbidden. Use typed declarations or validation.",
+        },
+      ],
+    },
+  },
   // Override default ignores of eslint-config-next.
   globalIgnores([
     // Default ignores of eslint-config-next:
