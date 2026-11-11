@@ -22,30 +22,29 @@ export type ErrorKey =
 export type FieldErrors = Partial<Record<Field, ErrorKey>>;
 export type ActionResult = { success: true; id: string } | { success: false; errors: FieldErrors };
 
+type MappedField = Exclude<Field, "form">;
+
+const errorByField: Record<MappedField, ErrorKey> = {
+  language: "invalidLanguage",
+  level: "invalidLevel",
+  focus: "invalidFocus",
+  journalId: "invalidJournal",
+  body: "invalidBody",
+  entryDate: "invalidDate",
+};
+
+function isMappedField(value: PropertyKey | undefined): value is MappedField {
+  return typeof value === "string" && Object.hasOwn(errorByField, value);
+}
+
 export function mapIssues(issues: readonly z.core.$ZodIssue[]): ActionResult {
   const errors: FieldErrors = {};
   for (const issue of issues) {
-    switch (issue.path[0]) {
-      case "language":
-        errors.language = "invalidLanguage";
-        break;
-      case "level":
-        errors.level = "invalidLevel";
-        break;
-      case "focus":
-        errors.focus = "invalidFocus";
-        break;
-      case "journalId":
-        errors.journalId = "invalidJournal";
-        break;
-      case "body":
-        errors.body = "invalidBody";
-        break;
-      case "entryDate":
-        errors.entryDate = "invalidDate";
-        break;
-      default:
-        errors.form = "saveFailed";
+    const field = issue.path[0];
+    if (isMappedField(field)) {
+      errors[field] = errorByField[field];
+    } else {
+      errors.form = "saveFailed";
     }
   }
   return { success: false, errors };

@@ -10,6 +10,8 @@ vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
 import { revalidatePath } from "next/cache";
 import { createEntryAction, createJournalAction } from "../../src/app/journals/actions";
 import { createEntry, createJournal, getJournal } from "../../src/lib/journal";
+import { dictionaries } from "../../src/i18n/dictionaries";
+import type { ErrorKey, Field } from "../../src/lib/journal/action-input";
 import {
   entryActionSchema,
   journalActionSchema,
@@ -36,6 +38,55 @@ function form(values: Record<string, string | string[]>): FormData {
 }
 
 beforeEach(() => vi.resetAllMocks());
+
+const expectedErrors: Record<Exclude<Field, "form">, ErrorKey> = {
+  language: "invalidLanguage",
+  level: "invalidLevel",
+  focus: "invalidFocus",
+  journalId: "invalidJournal",
+  body: "invalidBody",
+  entryDate: "invalidDate",
+};
+
+test("every mapped field produces its expected error key", () => {
+  for (const [field, key] of Object.entries(expectedErrors)) {
+    expect(mapIssues([{ code: "custom", path: [field], message: "Invalid" }])).toEqual({
+      success: false,
+      errors: { [field]: key },
+    });
+  }
+});
+
+test("unmapped, missing, numeric and symbol paths produce a form error without throwing", () => {
+  const paths: PropertyKey[][] = [
+    ["unmapped"],
+    [],
+    [Symbol("body")],
+    [0],
+    ["toString"],
+    ["__proto__"],
+  ];
+  for (const path of paths) {
+    expect(mapIssues([{ code: "custom", path, message: "Invalid" }])).toEqual({
+      success: false,
+      errors: { form: "saveFailed" },
+    });
+  }
+});
+
+test("every mapped field has a translated message in en, es and it", () => {
+  for (const field of Object.keys(expectedErrors)) {
+    const result = mapIssues([{ code: "custom", path: [field], message: "Invalid" }]);
+    if (result.success) throw new Error("Expected field errors");
+    const keys = Object.values(result.errors);
+    expect(keys).toHaveLength(1);
+    for (const key of keys) {
+      for (const dictionary of Object.values(dictionaries)) {
+        expect(dictionary[key].trim().length).toBeGreaterThan(0);
+      }
+    }
+  }
+});
 
 test("journal form reuses domain validation and accepts up to three configured focus areas", () => {
   expect(
