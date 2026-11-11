@@ -2,13 +2,13 @@
 
 import { refresh } from "next/cache";
 import { cookies } from "next/headers";
-import { isLocale } from "./types";
+import { localeSchema } from "../config/locales";
 
 export async function setLocale(formData: FormData) {
-  const locale = formData.get("locale");
-  if (!isLocale(locale)) return;
+  const locale = localeSchema.safeParse(formData.get("locale"));
+  if (!locale.success) return;
 
-  (await cookies()).set("locale", locale, {
+  (await cookies()).set("locale", locale.data, {
     path: "/",
     sameSite: "lax",
     httpOnly: true,
