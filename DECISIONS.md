@@ -159,3 +159,25 @@ Scope: the brief's Stage 1 (required) plus one optional Stage 2 slice. Each deci
 ## Still open
 - Time budget for the exercise.
 - Whether the take-home deadline is confirmed with the employer.
+
+## D-023: Next.js as one full-stack app, not a pure SPA
+- **Question:** Single-page React app with a separate API, or one Next.js app?
+- **Chosen:** One Next.js app (App Router, TypeScript). UI and API routes in one repo, deployed as one service.
+- **Why:** One language and one deployable. Server rendering and route handlers come with the framework. Fewer services to run and deploy than a static front end plus an API.
+- **Trade-off:** The brief says "Single Page Application". This app is not a pure SPA. Screens are client components, so navigation after the first load happens in the browser, but the first load is server-rendered. A pure SPA would mean static export, which removes the API routes and needs a separate backend. The README must state this trade-off.
+- **Supersedes:** the claim in D-012 that App Router "supports the original single-page application intent". That overstated the match.
+
+## D-024: Onboarding asks for language and level only
+- **Question:** What does the learner answer when creating a journal?
+- **Chosen:** Language (three cards: English, Spanish, Italian). Level (four cards with a hint). Focus: optional, one or two of three to six chips. No required intention question.
+- **Why:** The brief stresses minimal friction. Two required taps and an optional focus keep writing close to the first screen.
+- **Trade-off:** Intention is not captured at setup. It can be added later without changing the feedback logic.
+
+## D-025: Level bands and certificate hints
+- **Question:** What does each level mean, and how is it explained?
+- **Chosen:** New = CEFR A1. Basic = A2. Intermediate = B1–B2. Advanced = C1–C2. Each card names an example certificate for the selected language, with "about" wording and no claim of certification.
+- **Why:** CEFR is the common reference. Hints let the learner place themselves without knowing CEFR.
+- **Trade-off:** Self-reported. English has no general Cambridge exam at A1. SIELE is a scored scale, not a per-level certificate, so Spanish hints use DELE. Italian has four providers, so the hint names CELI.
+
+## Open
+- Whether the rewrite step is in Stage 1 or a stretch goal.
