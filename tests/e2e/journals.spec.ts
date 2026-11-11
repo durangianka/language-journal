@@ -2,6 +2,7 @@
 import postgres from "postgres";
 import { expect, test, type Page } from "@playwright/test";
 import { today } from "../../src/lib/journal/dates";
+import { testDatabaseUrl } from "../support/test-database-url";
 
 test.use({ viewport: { width: 375, height: 812 }, hasTouch: true, isMobile: true });
 
@@ -10,9 +11,7 @@ test.afterEach(async () => {
   const id = createdJournalId;
   createdJournalId = undefined;
   if (!id) return;
-  const url = process.env.DATABASE_URL;
-  if (!url) throw new Error("DATABASE_URL is required for browser test cleanup");
-  const sql = postgres(url);
+  const sql = postgres(testDatabaseUrl());
   try {
     await sql`delete from journals where id = ${id}`;
   } finally {
@@ -183,20 +182,27 @@ for (const { timezoneId, instant, day, label } of [
   });
 }
 
-async function failNextAction(page: Page) {
-  let failed = false;
-  await page.route("**/journals/**", async (route) => {
-    if (failed || !route.request().headers()["next-action"]) {
-      await route.continue();
-      return;
+async function rejectInsert(table: "journals" | "entries", action: () => Promise<void>) {
+  const sql = postgres(testDatabaseUrl(), { max: 1 });
+  try {
+    // The browser still invokes the real action. Postgres rejects its INSERT.
+    await sql`create function test_reject_insert() returns trigger language plpgsql as $$
+      begin raise exception 'Test database write failure'; end;
+    $$`;
+    try {
+      await sql`create trigger test_reject_insert before insert on ${sql(table)}
+        for each row execute function test_reject_insert()`;
+      try {
+        await action();
+      } finally {
+        await sql`drop trigger test_reject_insert on ${sql(table)}`;
+      }
+    } finally {
+      await sql`drop function test_reject_insert()`;
     }
-    failed = true;
-    // Return a resolved Server Action failure so React performs its form reset.
-    await route.fulfill({
-      contentType: "text/x-component",
-      body: '0:{"a":{"success":false,"errors":{"form":"saveFailed"}}}\n',
-    });
-  });
+  } finally {
+    await sql.end();
+  }
 }
 
 test("failed actions keep journal language and level and entry fields for retry", async ({
@@ -208,11 +214,12 @@ test("failed actions keep journal language and level and entry fields for retry"
   await language.check();
   await level.check();
   await page.getByRole("button", { name: "Travel", exact: true }).tap();
-  await failNextAction(page);
-  await page.getByRole("button", { name: "Create journal", exact: true }).tap();
-  await expect(page.locator("#form-error")).toHaveText(
-    "We could not save this. Your writing is still here. Please try again.",
-  );
+  await rejectInsert("journals", async () => {
+    await page.getByRole("button", { name: "Create journal", exact: true }).tap();
+    await expect(page.locator("#form-error")).toHaveText(
+      "We could not save this. Your writing is still here. Please try again.",
+    );
+  });
   await expect(language).toBeChecked();
   await expect(level).toBeChecked();
   await expect(page.getByRole("button", { name: "Travel", exact: true })).toHaveAttribute(
@@ -230,9 +237,10 @@ test("failed actions keep journal language and level and entry fields for retry"
   const body = page.getByLabel("Your entry", { exact: true });
   await date.fill("2026-11-09");
   await body.fill("Hoy escribo en español.");
-  await failNextAction(page);
-  await page.getByRole("button", { name: "Save entry", exact: true }).tap();
-  await expect(page.locator("#form-error")).toBeVisible();
+  await rejectInsert("entries", async () => {
+    await page.getByRole("button", { name: "Save entry", exact: true }).tap();
+    await expect(page.locator("#form-error")).toBeVisible();
+  });
   await expect(date).toHaveValue("2026-11-09");
   await expect(body).toHaveValue("Hoy escribo en español.");
   await page.getByRole("button", { name: "Save entry", exact: true }).tap();
