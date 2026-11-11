@@ -88,17 +88,12 @@ test("every mapped field has a translated message in en, es and it", () => {
   }
 });
 
-test("journal form reuses domain validation and accepts up to three configured focus areas", () => {
-  expect(
-    parseJournalForm(form({ language: "en", level: "basic", focus: ["travel", "work", "grammar"] }))
-      .success,
-  ).toBe(true);
+test("journal form reuses domain validation and accepts level-dependent focus areas", () => {
+  for (const focus of [[], ["travel"], ["travel", "food"]]) {
+    expect(parseJournalForm(form({ language: "en", level: "basic", focus })).success).toBe(true);
+  }
   expect(parseJournalForm(form({ language: "it", level: "new" })).success).toBe(true);
-  for (const focus of [
-    ["other"],
-    ["travel", "travel"],
-    ["travel", "work", "grammar", "vocabulary"],
-  ]) {
+  for (const focus of [["other"], ["travel", "travel"], ["travel", "work", "grammar"]]) {
     const result = journalActionSchema.safeParse({ language: "en", level: "new", focus });
     expect(result.success).toBe(false);
     if (!result.success)
@@ -107,6 +102,28 @@ test("journal form reuses domain validation and accepts up to three configured f
         errors: { focus: "invalidFocus" },
       });
   }
+});
+
+test.each([
+  ["new", 1],
+  ["basic", 2],
+  ["intermediate", 3],
+  ["advanced", 3],
+] as const)("journal form enforces %s limit of %i", (level, limit) => {
+  const focus = ["grammar", "food", "travel", "work"];
+  for (const count of [0, limit - 1, limit]) {
+    const input = { language: "en", level, focus: focus.slice(0, count) };
+    expect(parseJournalForm(form(input)).data).toEqual(input);
+  }
+  const result = parseJournalForm(
+    form({ language: "en", level, focus: focus.slice(0, limit + 1) }),
+  );
+  expect(result.success).toBe(false);
+  if (!result.success)
+    expect(mapIssues(result.error.issues)).toEqual({
+      success: false,
+      errors: { focus: "invalidFocus" },
+    });
 });
 
 test("entry form rejects blank writing, oversize Unicode text, invalid dates and invalid IDs", () => {

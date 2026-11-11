@@ -32,6 +32,25 @@ describe("idSchema", () => {
 });
 
 describe("createJournalSchema", () => {
+  test.each([
+    ["new", 1],
+    ["basic", 2],
+    ["intermediate", 3],
+    ["advanced", 3],
+  ] as const)("enforces the %s level limit of %i", (level, limit) => {
+    const choices = ["grammar", "food", "travel", "work"];
+    for (const count of [0, limit - 1, limit]) {
+      const input = { language: "en", level, focus: choices.slice(0, count) };
+      expect(createJournalSchema.parse(input)).toEqual(input);
+    }
+    const result = createJournalSchema.safeParse({
+      language: "en",
+      level,
+      focus: choices.slice(0, limit + 1),
+    });
+    expect(result.success).toBe(false);
+    if (!result.success) expect(result.error.issues[0].path).toEqual(["focus"]);
+  });
   test.each(["en", "es", "it"])("accepts language %s", (language) => {
     expect(createJournalSchema.parse({ language, level: "new" }).focus).toEqual([]);
   });
@@ -40,10 +59,13 @@ describe("createJournalSchema", () => {
     expect(createJournalSchema.parse({ language: "en", level, focus: [] }).level).toBe(level);
   });
 
-  test("accepts three focus items", () => {
-    const input = { language: "it", level: "advanced", focus: ["travel", "work", "food"] };
-    expect(createJournalSchema.parse(input)).toEqual(input);
-  });
+  test.each([{ focus: [] }, { focus: ["travel"] }, { focus: ["travel", "food"] }])(
+    "accepts optional focus %j",
+    ({ focus }) => {
+      const input = { language: "it", level: "advanced", focus };
+      expect(createJournalSchema.parse(input)).toEqual(input);
+    },
+  );
 
   test.each([
     {},
@@ -52,7 +74,7 @@ describe("createJournalSchema", () => {
     { language: "en", level: "expert" },
     { language: "en" },
     { level: "basic" },
-    { language: "en", level: "new", focus: ["a", "b", "c", "d"] },
+    { language: "en", level: "new", focus: ["travel", "work", "food"] },
     { language: "en", level: "new", focus: "travel" },
     { language: "en", level: "new", focus: [1] },
     { language: "en", level: "new", focus: null },

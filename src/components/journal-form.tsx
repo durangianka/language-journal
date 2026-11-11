@@ -8,7 +8,8 @@ import { UnitedKingdomFlag } from "@/components/flags/united-kingdom";
 import { SpainFlag } from "@/components/flags/spain";
 import { ItalyFlag } from "@/components/flags/italy";
 import { Button } from "@/components/ui/button";
-import { focusAreas, languages, languageLabelKeys, levels, levelHintKeys } from "@/config/domain";
+import { languages, languageLabelKeys, levels, levelHintKeys } from "@/config/domain";
+import { focusAreas, maxFocusByLevel } from "@/config/focus";
 import type { Locale } from "@/config/locales";
 import type { Dictionary } from "@/i18n/types";
 import type { ActionResult } from "@/lib/journal/action-input";
@@ -22,6 +23,8 @@ export function JournalForm({ t }: { t: Dictionary }) {
   const [language, setLanguage] = useState<Locale | null>(null);
   const [selectedLevel, setSelectedLevel] = useState<(typeof levels)[number] | null>(null);
   const [focus, setFocus] = useState<string[]>([]);
+  const focusLimit = selectedLevel ? maxFocusByLevel[selectedLevel] : 0;
+  const focusLimitReached = selectedLevel !== null && focus.length >= focusLimit;
   const [state, action, pending] = useActionState<ActionResult | null, FormData>(
     async (_previous, form) => {
       const result = await createJournalAction(form);
@@ -77,7 +80,10 @@ export function JournalForm({ t }: { t: Dictionary }) {
               required
               aria-label={t[level]}
               checked={selectedLevel === level}
-              onChange={() => setSelectedLevel(level)}
+              onChange={() => {
+                setSelectedLevel(level);
+                setFocus((current) => current.slice(0, maxFocusByLevel[level]));
+              }}
             />
             <span className="flex flex-col gap-1">
               <span className="font-medium">{t[level]}</span>
@@ -89,7 +95,10 @@ export function JournalForm({ t }: { t: Dictionary }) {
         ))}
         <FieldError id="level-error" error={errors.level} t={t} />
       </fieldset>
-      <fieldset className="flex flex-col gap-3" aria-describedby="focus-hint focus-error">
+      <fieldset
+        className="flex flex-col gap-3"
+        aria-describedby="focus-hint focus-limit focus-error"
+      >
         <legend className="mb-3 font-semibold">{t.focus}</legend>
         <p id="focus-hint" className="text-sm text-muted-foreground">
           {t.focusHint}
@@ -101,14 +110,15 @@ export function JournalForm({ t }: { t: Dictionary }) {
             variant={focus.includes(value) ? "secondary" : "outline"}
             className="min-h-11 w-full rounded-full"
             aria-pressed={focus.includes(value)}
-            disabled={pending || (focus.length === 3 && !focus.includes(value))}
-            onClick={() =>
+            disabled={pending || !selectedLevel || (focusLimitReached && !focus.includes(value))}
+            onClick={() => {
+              if (!selectedLevel || (!focus.includes(value) && focus.length >= focusLimit)) return;
               setFocus((current) =>
                 current.includes(value)
                   ? current.filter((item) => item !== value)
                   : [...current, value],
-              )
-            }
+              );
+            }}
           >
             {t[value]}
           </Button>
@@ -116,6 +126,9 @@ export function JournalForm({ t }: { t: Dictionary }) {
         {focus.map((value) => (
           <input key={value} type="hidden" name="focus" value={value} />
         ))}
+        <p id="focus-limit" role="status" className="text-sm text-muted-foreground">
+          {focusLimitReached ? t.focusLimitReached : null}
+        </p>
         <FieldError id="focus-error" error={errors.focus} t={t} />
       </fieldset>
       <FieldError id="form-error" error={errors.form} t={t} />

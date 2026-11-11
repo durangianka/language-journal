@@ -50,9 +50,16 @@ test("creates a journal and saves an entry on a 375px touch screen", async ({ pa
     page.getByText("About CEFR A2, for example Cambridge A2 Key.", { exact: true }),
   ).toBeVisible();
   await page.getByRole("radio", { name: "Basic · A2", exact: true }).check();
-  for (const name of ["Travel", "Work", "Grammar"])
+  for (const name of ["Travel", "Work"])
     await page.getByRole("button", { name, exact: true }).tap();
-  await expect(page.getByRole("button", { name: "Vocabulary", exact: true })).toBeDisabled();
+  await expect(page.getByRole("button", { name: "Grammar", exact: true })).toBeDisabled();
+  await expect(page.getByRole("button", { name: "Grammar", exact: true })).toHaveAttribute(
+    "aria-pressed",
+    "false",
+  );
+  await expect(page.locator("#focus-limit")).toHaveText(
+    "You have reached the focus limit for this level.",
+  );
   await checkTouchTargets(page);
   await page.screenshot({ path: "docs/screenshots/journal-pages/new-journal.png", fullPage: true });
   await page.getByRole("button", { name: "Create journal", exact: true }).tap();
@@ -232,3 +239,59 @@ test("failed actions keep journal language and level and entry fields for retry"
   await expect(page.getByRole("status")).toHaveText("New entry savedNovember 9, 2026");
   await expect(page.locator("main:visible li")).toContainText("Hoy escribo en español.");
 });
+
+test("changing levels updates capacity and preserves the first chosen focus areas", async ({
+  page,
+}) => {
+  await page.goto("/journals/new");
+  await page.locator('input[name="level"][value="advanced"]').check();
+  for (const name of ["Grammar", "Food", "Travel"])
+    await page.getByRole("button", { name, exact: true }).tap();
+  await expect(page.getByRole("button", { name: "Work", exact: true })).toBeDisabled();
+  await page.locator('input[name="level"][value="new"]').check();
+  await expect(page.locator('input[name="focus"]')).toHaveCount(1);
+  await expect(page.locator('input[name="focus"]')).toHaveValue("grammar");
+  await page.locator('input[name="level"][value="basic"]').check();
+  await expect(page.getByRole("button", { name: "Food", exact: true })).toBeEnabled();
+  await page.getByRole("button", { name: "Food", exact: true }).tap();
+  await expect(page.getByRole("button", { name: "Travel", exact: true })).toBeDisabled();
+});
+
+for (const { locale, names, message } of [
+  {
+    locale: "en",
+    names: ["Travel", "Work"],
+    message: "You have reached the focus limit for this level.",
+  },
+  {
+    locale: "es",
+    names: ["Viajes", "Trabajo"],
+    message: "Has alcanzado el límite de áreas para este nivel.",
+  },
+  {
+    locale: "it",
+    names: ["Viaggi", "Lavoro"],
+    message: "Hai raggiunto il limite di aree per questo livello.",
+  },
+]) {
+  test(`New level blocks an extra focus chip in ${locale}`, async ({ page, context }) => {
+    await context.addCookies([{ name: "locale", value: locale, url: "http://127.0.0.1:3100" }]);
+    await page.goto("/journals/new");
+    await expect(page.locator("fieldset button[aria-pressed]")).toHaveCount(6);
+    await page.locator('input[name="level"][value="new"]').check();
+    const [first, second] = names.map((name) => page.getByRole("button", { name, exact: true }));
+    await first.tap();
+    await expect(second).toBeDisabled();
+    await expect(second).toHaveAttribute("aria-pressed", "false");
+    await expect(page.locator('fieldset button[aria-pressed="true"]')).toHaveCount(1);
+    await expect(page.locator('input[name="focus"]')).toHaveCount(1);
+    await expect(page.locator("#focus-limit")).toHaveText(message);
+    await first.tap();
+    await expect(page.locator("#focus-limit")).toBeEmpty();
+    await expect(second).toBeEnabled();
+    await second.tap();
+    await expect(second).toHaveAttribute("aria-pressed", "true");
+    await second.tap();
+    await expect(page.locator('input[name="focus"]')).toHaveCount(0);
+  });
+}

@@ -1,15 +1,24 @@
 import { z } from "zod";
+import { focusAreas, maxFocusByLevel } from "../../config/focus";
 import { levels } from "../../config/domain";
 import { localeSchema } from "../../config/locales";
 import { today } from "./dates";
 
 export const idSchema = z.uuid();
 
-export const createJournalSchema = z.strictObject({
-  language: localeSchema,
-  level: z.enum(levels),
-  focus: z.array(z.string()).max(3).default([]),
-});
+export const createJournalSchema = z
+  .strictObject({
+    language: localeSchema,
+    level: z.enum(levels),
+    focus: z
+      .array(z.enum(focusAreas))
+      .refine((items) => new Set(items).size === items.length)
+      .default([]),
+  })
+  .refine(({ level, focus }) => focus.length <= maxFocusByLevel[level], {
+    path: ["focus"],
+    message: "Too many focus areas for the selected level",
+  });
 
 export const createEntrySchema = z.strictObject({
   journalId: idSchema,

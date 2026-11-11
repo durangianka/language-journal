@@ -1,13 +1,7 @@
 import { z } from "zod";
-import { focusAreas } from "../../config/domain";
 import { createEntrySchema, createJournalSchema } from "./schemas";
 
-export const journalActionSchema = createJournalSchema.extend({
-  focus: z
-    .array(z.enum(focusAreas))
-    .max(3)
-    .refine((items) => new Set(items).size === items.length),
-});
+export const journalActionSchema = createJournalSchema;
 export const entryActionSchema = createEntrySchema;
 
 export type Field = "language" | "level" | "focus" | "journalId" | "body" | "entryDate" | "form";

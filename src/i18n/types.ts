@@ -23,11 +23,13 @@ export type Dictionary = {
   selectLanguageHint: string;
   focus: string;
   focusHint: string;
+  focusLimitReached: string;
   travel: string;
   work: string;
   everyday: string;
   grammar: string;
   vocabulary: string;
+  food: string;
   createJournal: string;
   saving: string;
   newEntry: string;

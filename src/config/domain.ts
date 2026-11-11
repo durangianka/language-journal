@@ -8,14 +8,6 @@ export const languageLabelKeys = {
   it: "italian",
 } satisfies Record<(typeof languages)[number], "english" | "spanish" | "italian">;
 
-export const focusAreas: readonly ["travel", "work", "everyday", "grammar", "vocabulary"] = [
-  "travel",
-  "work",
-  "everyday",
-  "grammar",
-  "vocabulary",
-];
-
 export const levels: readonly ["new", "basic", "intermediate", "advanced"] = [
   "new",
   "basic",
