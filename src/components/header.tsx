@@ -4,14 +4,20 @@ import { UnitedKingdomFlag } from "@/components/flags/united-kingdom";
 import { SpainFlag } from "@/components/flags/spain";
 import { ItalyFlag } from "@/components/flags/italy";
 import { setLocale } from "@/i18n/actions";
+import { locales } from "@/config/locales";
 import type { Dictionary, Locale } from "@/i18n/types";
 
-export function Header({ locale, dictionary: t }: { locale: Locale; dictionary: Dictionary }) {
-  const languages = [
-    { locale: "en", name: t.english, Flag: UnitedKingdomFlag },
-    { locale: "es", name: t.spanish, Flag: SpainFlag },
-    { locale: "it", name: t.italian, Flag: ItalyFlag },
-  ] as const;
+interface IHeaderProps {
+  locale: Locale;
+  dictionary: Dictionary;
+}
+
+export function Header({ locale, dictionary: t }: IHeaderProps) {
+  const languages = {
+    en: { name: t.english, Flag: UnitedKingdomFlag },
+    es: { name: t.spanish, Flag: SpainFlag },
+    it: { name: t.italian, Flag: ItalyFlag },
+  } satisfies Record<Locale, { name: string; Flag: typeof UnitedKingdomFlag }>;
 
   return (
     <header className="border-b">
@@ -20,13 +26,16 @@ export function Header({ locale, dictionary: t }: { locale: Locale; dictionary: 
           {t.appName}
         </Link>
         <nav aria-label={t.languages} className="flex shrink-0 gap-1">
-          {languages.map(({ locale: value, name, Flag }) => (
-            <form action={setLocale} key={value}>
-              <Button type="submit" name="locale" value={value} aria-label={name} title={name} aria-pressed={locale === value} variant={locale === value ? "outline" : "ghost"} size="icon-lg">
-                <Flag title={name} />
-              </Button>
-            </form>
-          ))}
+          {locales.map((value) => {
+            const { name, Flag } = languages[value];
+            return (
+              <form action={setLocale} key={value}>
+                <Button type="submit" name="locale" value={value} aria-label={name} title={name} aria-pressed={locale === value} variant={locale === value ? "outline" : "ghost"} size="icon-lg">
+                  <Flag title={name} />
+                </Button>
+              </form>
+            );
+          })}
         </nav>
       </div>
     </header>

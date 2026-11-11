@@ -5,7 +5,7 @@ test("flags switch the interface and persist the locale cookie", async ({ page, 
   await expect(page.getByRole("button", { name: "English", exact: true })).toHaveAttribute("aria-pressed", "true");
 
   for (const language of [
-    { name: "Spanish", locale: "es", heading: "Diario de idiomas", description: "Un espacio para tu aprendizaje de idiomas.", button: "Nuevo diario", active: "Español" },
+    { name: "Spanish", locale: "es", heading: "Diario de idiomas", description: "Un espacio para aprender idiomas.", button: "Nuevo diario", active: "Español" },
     { name: "Italiano", locale: "it", heading: "Diario delle lingue", description: "Uno spazio per il tuo percorso di apprendimento delle lingue.", button: "Nuovo diario", active: "Italiano" },
     { name: "Inglese", locale: "en", heading: "Language Journal", description: "A space for your language learning journey.", button: "New journal", active: "English" },
   ]) {

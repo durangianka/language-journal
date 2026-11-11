@@ -1,6 +1,7 @@
 import { expect, test } from "vitest";
 import { dictionaries } from "../../src/i18n/dictionaries";
-import { isLocale, locales } from "../../src/i18n/types";
+import { locales } from "../../src/config/locales";
+import { isLocale } from "../../src/i18n/types";
 
 test.each(locales)("%s has the complete dictionary and nonempty translations", (locale) => {
   expect(Object.keys(dictionaries[locale]).sort()).toEqual(Object.keys(dictionaries.en).sort());

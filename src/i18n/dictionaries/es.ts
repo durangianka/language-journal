@@ -3,10 +3,10 @@ import type { Dictionary } from "../types";
 export const es = {
   appName: "Diario de idiomas",
   home: "Inicio",
-  languages: "Idioma de la interfaz",
+  languages: "Idioma",
   english: "Inglés",
   spanish: "Español",
   italian: "Italiano",
   newJournal: "Nuevo diario",
-  homeDescription: "Un espacio para tu aprendizaje de idiomas.",
+  homeDescription: "Un espacio para aprender idiomas.",
 } satisfies Dictionary;

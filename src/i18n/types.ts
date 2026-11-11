@@ -1,5 +1,6 @@
-export const locales = ["en", "es", "it"] as const;
-export type Locale = (typeof locales)[number];
+import { locales, type Locale } from "../config/locales";
+
+export type { Locale } from "../config/locales";
 
 export type Dictionary = {
   appName: string;
