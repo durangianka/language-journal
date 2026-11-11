@@ -29,6 +29,9 @@ const eslintConfig = defineConfig([
   },
   // Override default ignores of eslint-config-next.
   globalIgnores([
+    // Vendored agent guidance includes standalone example code.
+    ".agents/skills/**",
+    ".claude/skills/**",
     // Default ignores of eslint-config-next:
     ".next/**",
     "out/**",
