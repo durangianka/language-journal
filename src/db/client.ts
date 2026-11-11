@@ -7,14 +7,14 @@ if (!url) {
   throw new Error("DATABASE_URL is required. Copy .env.example to .env.");
 }
 
-const globalForDb = globalThis as unknown as {
-  postgresClient?: ReturnType<typeof postgres>;
-};
+declare global {
+  var postgresClient: ReturnType<typeof postgres> | undefined;
+}
 
-const client = globalForDb.postgresClient ?? postgres(url);
+const client = globalThis.postgresClient ?? postgres(url);
 
 if (process.env.NODE_ENV !== "production") {
-  globalForDb.postgresClient = client;
+  globalThis.postgresClient = client;
 }
 
 export const db = drizzle({ client });
