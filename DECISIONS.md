@@ -226,3 +226,10 @@ Scope: the brief's Stage 1 (required) plus one optional Stage 2 slice. Each deci
 - **Chosen:** Phone width (375px) first, touch targets at least 44px tall, and touch emulation in browser tests. Desktop layouts are added after the phone layout works.
 - **Why:** The owner wants to use the app on a phone. Designing mobile first avoids retrofitting touch behaviour later.
 - **Trade-off:** Desktop-only refinements come later and need their own review.
+
+## D-033: One or two focus areas at journal setup
+- **Question:** How many focus areas can a learner choose?
+- **Chosen:** One or two. Zero is allowed. Six options are offered.
+- **Why:** The owner's direction is a light setup. Fewer choices keep the feedback focused.
+- **Trade-off:** A learner who wants three focus areas must pick two now and change later. The database and form enforce the limit.
+- **Supersedes:** the "up to three" limit in D-018 and the "up to three" value in the PR 9 schema.
