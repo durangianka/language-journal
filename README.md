@@ -28,6 +28,7 @@ Start Postgres on host port 5433 and run the app:
 
 ```sh
 pnpm db:up
+pnpm db:migrate
 pnpm dev
 ```
 
@@ -57,10 +58,30 @@ pnpm test:e2e
 The browser test builds and starts its own production server on port 3100.
 It needs neither a running database nor an AI key.
 
-For future schema changes, `pnpm db:generate` writes migrations to `drizzle/`
-and `pnpm db:migrate` applies them using `DATABASE_URL`. There are no tables or
-migrations in this scaffold, so neither command is needed for setup.
+For schema changes, `pnpm db:generate` writes migrations to `drizzle/`
+and `pnpm db:migrate` applies them using `DATABASE_URL`.
+
+`pnpm test` runs unit tests without a database. Run the database integration test
+separately after starting Postgres and applying migrations:
+
+```sh
+pnpm db:up
+pnpm db:migrate
+pnpm test:integration
+```
+
+The integration test uses `DATABASE_URL` from the environment or `.env`, creates
+its own journal and entries, and deletes them even if an assertion fails.
 
 ## Architecture
 
-to be written
+`src/db/schema.ts` defines journals and entries. `src/lib/journal` provides
+server-only create, list, and get functions, with Zod input schemas in
+`schemas.ts` and plain return types in `types.ts`. Lookups return `null` when
+the ID does not exist. Lists return arrays, including an empty array when there
+are no matches. Entries are ordered by entry date descending, then creation time
+descending. Timestamps are ISO strings; entry dates are `YYYY-MM-DD` strings.
+An omitted entry date defaults to the app server's local calendar date when the
+input is parsed. Entry bodies preserve the learner's whitespace and allow up to
+5000 Unicode code points. No update operation is exposed yet; `updated_at`
+starts at creation time.

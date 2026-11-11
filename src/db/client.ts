@@ -1,3 +1,5 @@
+import "server-only";
+
 import { drizzle } from "drizzle-orm/postgres-js";
 import postgres from "postgres";
 
@@ -11,7 +13,7 @@ declare global {
   var postgresClient: ReturnType<typeof postgres> | undefined;
 }
 
-const client = globalThis.postgresClient ?? postgres(url);
+export const client = globalThis.postgresClient ?? postgres(url);
 
 if (process.env.NODE_ENV !== "production") {
   globalThis.postgresClient = client;
