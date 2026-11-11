@@ -101,3 +101,128 @@ Append-only. Each entry: the question, what was chosen, why, and the trade-off a
 - **Chosen:** Set `agentRules: false` and keep a short repository-owned `AGENTS.md` pointing to the version-matched documentation bundled with Next.js. Leave agent feedback disabled.
 - **Why:** The generator's managed prose conflicts with this repository's punctuation rule, and automatic rewrites would create unnecessary working-tree changes.
 - **Trade-off:** Future maintainers update the short instructions themselves when the documentation workflow changes.
+
+---
+
+## Product decisions (2026-11-11)
+
+Scope: the brief's Stage 1 (required) plus one optional Stage 2 slice. Each decision below was made with the owner on 2026-11-11.
+
+## D-015: The user and the core loop
+- **Question:** Who is the user, and what do they do?
+- **Chosen:** One adult learner who practises one language. They write a short entry, get three explained corrections plus a corrected version, save it, and later reopen past entries.
+- **Why:** This is the loop the brief defines, and it is the only path the owner can judge from their own experience.
+- **Trade-off:** No speaking, streaks, sharing or social features.
+
+## D-016: Build in two slices, not one
+- **Question:** How much to build, and in what order?
+- **Chosen:** Slice 1 is the full Stage 1 loop end to end. Slice 2 is a simple review view that counts recurring mistake categories. Everything else is out.
+- **Why:** Slice 1 is complete and demonstrable early. Slice 2 is the one Stage 2 item that changes the review experience, and it stays small.
+- **Trade-off:** No progress charts, no AI tools, no streaks.
+
+## D-017: Spanish first, Italian by configuration
+- **Question:** Which languages ship?
+- **Chosen:** Spanish is the first language. Italian is added through configuration, not code. English is out of scope.
+- **Why:** One language gives one set of error categories to tune. The owner can judge Spanish and Italian corrections directly.
+- **Trade-off:** A narrower demo. The data model stays language-agnostic, so adding a language does not change the schema.
+
+## D-018: Four setup questions per journal
+- **Question:** What does the app ask when a journal is created?
+- **Chosen:** Language. Level (new, basic, intermediate, advanced, with "not sure"). Main intention (one choice from a fixed list). Focus areas (up to three).
+- **Why:** These four answers change the feedback. Research supports focused feedback and broad level bands.
+- **Trade-off:** Self-reported level can be wrong. Each feedback response states the level it assumed, so the learner can correct it.
+
+## D-019: Feedback is three explained corrections plus a corrected version
+- **Question:** What does feedback look like?
+- **Chosen:** A corrected full text. Up to three corrections, each with the original span, the fix, a category, and a one-line explanation pitched at the learner's level.
+- **Why:** A learner can act on three items. The corrected text shows what good looks like.
+- **Trade-off:** Other errors are hidden. A "show all" option can come later.
+
+## D-020: AI does one structured call, the app controls everything else
+- **Question:** Should the model call tools?
+- **Chosen:** Stage 1 is a single structured call, validated with Zod. The app performs all reads and writes. Read-only tools are deferred to Stage 2.
+- **Why:** Each step is testable, and the owner can explain each one. The model never writes to the database.
+- **Trade-off:** Less "agentic" than a tool loop. The provider interface leaves room to add tools later.
+
+## D-021: OpenAI gpt-6-luna behind a provider interface
+- **Question:** Which model for the build?
+- **Chosen:** OpenAI `gpt-6-luna` with structured output. Behind an interface, so Mistral or Groq can be swapped in.
+- **Why:** About $0.43 per 1,000 analyses, well inside the $5 budget, and it supports strict JSON schemas.
+- **Trade-off:** OpenAI keeps abuse logs for up to 30 days. Use only the owner's own entries until the data terms are reviewed.
+
+## D-022: The entry is saved before feedback
+- **Question:** What happens if the AI fails?
+- **Chosen:** The entry saves first. Feedback has a status of pending, ready or failed, with a retry action.
+- **Why:** The learner never loses writing to a provider error.
+- **Trade-off:** The database holds entries with no feedback, and the UI must show that state.
+
+## Still open
+- Time budget for the exercise.
+- Whether the take-home deadline is confirmed with the employer.
+
+## D-023: Next.js as one full-stack app, not a pure SPA
+- **Question:** Single-page React app with a separate API, or one Next.js app?
+- **Chosen:** One Next.js app (App Router, TypeScript). UI and API routes in one repo, deployed as one service.
+- **Why:** One language and one deployable. Server rendering and route handlers come with the framework. Fewer services to run and deploy than a static front end plus an API.
+- **Trade-off:** The brief says "Single Page Application". This app is not a pure SPA. Screens are client components, so navigation after the first load happens in the browser, but the first load is server-rendered. A pure SPA would mean static export, which removes the API routes and needs a separate backend. The README must state this trade-off.
+- **Supersedes:** the claim in D-012 that App Router "supports the original single-page application intent". That overstated the match.
+
+## D-024: Onboarding asks for language and level only
+- **Question:** What does the learner answer when creating a journal?
+- **Chosen:** Language (three cards: English, Spanish, Italian). Level (four cards with a hint). Focus: optional, one or two of three to six chips. No required intention question.
+- **Why:** The brief stresses minimal friction. Two required taps and an optional focus keep writing close to the first screen.
+- **Trade-off:** Intention is not captured at setup. It can be added later without changing the feedback logic.
+
+## D-025: Level bands and certificate hints
+- **Question:** What does each level mean, and how is it explained?
+- **Chosen:** New = CEFR A1. Basic = A2. Intermediate = B1–B2. Advanced = C1–C2. Each card names an example certificate for the selected language, with "about" wording and no claim of certification.
+- **Why:** CEFR is the common reference. Hints let the learner place themselves without knowing CEFR.
+- **Trade-off:** Self-reported. English has no general Cambridge exam at A1. SIELE is a scored scale, not a per-level certificate, so Spanish hints use DELE. Italian has four providers, so the hint names CELI.
+
+## Open
+- Whether the rewrite step is in Stage 1 or a stretch goal.
+
+## D-026: Rewrite step is a stretch goal, not Stage 1 core
+- **Question:** Is the "rewrite and resubmit" step part of Stage 1?
+- **Chosen:** No. Stage 1 is the brief's loop: write, get feedback, save, review. Rewrite is documented in the README as the next step, and built only if the core is complete and tested.
+- **Why:** The brief requires the core loop, and the review says "clarity and correctness over feature completeness". A finished, tested core is worth more than an unfinished extra.
+- **Trade-off:** The learning argument for rewriting is stated but not demonstrated in the demo.
+- **Resolves:** the open item "Whether the rewrite step is in Stage 1".
+
+## D-027: Level cards show CEFR first, with one example certificate
+- **Question:** Which label and which certificate example appear on the level cards?
+- **Chosen:** The CEFR band is the main label (A1, A2, B1–B2, C1–C2), since the owner knows these from Italian schooling. Each card shows one example certificate per language: Cambridge for English, DELE for Spanish, CELI for Italian.
+- **Why:** CEFR is the shared standard in all three languages. Cambridge is the best-known English exam worldwide. DELE is Instituto Cervantes' official Spanish exam. CELI is one of the best-known Italian certificates, and CILS is an equally valid alternative.
+- **Trade-off:** One example per language keeps cards simple, but it doesn't show every provider. Hints stay "about", never a claim of certification.
+
+## D-028: Next.js is final for Stage 1
+- **Question:** Next.js or a separate React single-page app?
+- **Chosen:** Next.js, as recorded in D-023. No further change.
+- **Why:** One full-stack app, one deployable, and the owner's standard stack.
+- **Trade-off:** Stated in D-023 and to be stated in the README.
+
+## D-029: No authentication until deployment or a second user
+- **Question:** Should the app have login?
+- **Chosen:** No. The app runs locally for one person. Authentication is added before any deployment or any second user.
+- **Why:** The brief allows "no authentication". Sessions, password handling and auth tests add review surface without helping the Stage 1 loop.
+- **Trade-off:** Anyone with access to the running machine can read the journal. Acceptable locally, not on a public URL.
+- **Trigger to revisit:** the first deployment, or the first second user. At that point, every page, server action, route handler and API must sit behind auth. The users table is created by the auth library's generator, not written by hand.
+
+## D-030: Graphify maps the codebase after every merge
+- **Question:** How do agents avoid spending tokens rediscovering the code?
+- **Chosen:** Graphify builds a knowledge graph of the repository (which files define and use which). It is regenerated after every merge into `main`, by a git post-merge hook. Its output folder is gitignored.
+- **Why:** An agent that can query "what touches this function" reads fewer files, which saves tokens and avoids wrong edits. Post-merge is the trigger that matches "we merged", and avoids slowing every commit the way a pre-commit hook would.
+- **Trade-off:** The graph is per machine, so each clone regenerates it. The hook only runs on pulls that bring merges. A stale graph is possible until the next merge.
+- **Trigger to revisit:** if the graph starts sending code to a hosted service, the decision is re-taken (see the egress check in the PR).
+
+## D-031: Agents run and maintain the app; the owner reviews, comments and approves
+- **Question:** Who keeps the local app running and up to date?
+- **Chosen:** Agents do the operational work. After each approved merge, an agent pulls `main` into the main checkout, starts the Docker database, applies migrations, and restarts the dev server. The owner reviews pull requests, comments, and approves. Approval means the owner says so in the PR or in chat, and then an agent merges.
+- **Why:** The owner's role is product judgment and review. Manual setup steps would add friction and drift between what was reviewed and what runs.
+- **Trade-off:** The owner depends on the agent's run log to know what is live. Each merge gets a short note in the PR listing what was applied.
+
+## D-032: Mobile first
+- **Question:** Which screen size is designed and tested first?
+- **Chosen:** Phone width (375px) first, touch targets at least 44px tall, and touch emulation in browser tests. Desktop layouts are added after the phone layout works.
+- **Why:** The owner wants to use the app on a phone. Designing mobile first avoids retrofitting touch behaviour later.
+- **Trade-off:** Desktop-only refinements come later and need their own review.

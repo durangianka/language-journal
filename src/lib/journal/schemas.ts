@@ -1,11 +1,11 @@
 import { z } from "zod";
 import { levels } from "../../config/domain";
-import { locales } from "../../config/locales";
+import { localeSchema } from "../../config/locales";
 
 export const idSchema = z.uuid();
 
 export const createJournalSchema = z.strictObject({
-  language: z.enum(locales),
+  language: localeSchema,
   level: z.enum(levels),
   focus: z.array(z.string()).max(3).default([]),
 });
@@ -24,10 +24,7 @@ export const createEntrySchema = z.strictObject({
   body: z
     .string()
     .refine((body) => body.trim().length > 0, "Body must not be blank")
-    .refine(
-      (body) => Array.from(body).length <= 5000,
-      "Body must be at most 5000 characters",
-    ),
+    .refine((body) => Array.from(body).length <= 5000, "Body must be at most 5000 characters"),
   entryDate: z.iso.date().default(today),
 });
 
