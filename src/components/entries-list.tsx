@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { formatDate } from "@/components/journal-layout";
 import { SavedNotice } from "@/components/saved-notice";
+import { JournalReview } from "@/components/journal-review";
 import type { Dictionary, Locale } from "@/i18n/types";
 import { listEntries } from "@/lib/journal";
 import { idSchema } from "@/lib/journal/schemas";
@@ -29,23 +30,12 @@ export async function EntriesList({
           label={t.entrySaved}
         />
       )}
-      {entries.length === 0 ? (
-        <p className="rounded-xl border p-5 text-muted-foreground">{t.emptyEntries}</p>
-      ) : (
-        <ul className="flex flex-col gap-3">
-          {entries.map((entry) => (
-            <li key={entry.id} className="min-h-11 rounded-xl border p-5">
-              <time dateTime={entry.entryDate} className="font-semibold">
-                {formatDate(entry.entryDate, locale)}
-              </time>
-              <p className="mt-2 line-clamp-2 break-words whitespace-pre-wrap text-sm text-muted-foreground">
-                {Array.from(entry.body).slice(0, 160).join("")}
-                {Array.from(entry.body).length > 160 ? "…" : ""}
-              </p>
-            </li>
-          ))}
-        </ul>
-      )}
+      <JournalReview
+        id={id}
+        initialEntries={entries.map((entry) => ({ ...entry, latestFeedback: null }))}
+        locale={locale}
+        t={t}
+      />
     </>
   );
 }
