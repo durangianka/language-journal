@@ -7,6 +7,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { createEntryAction, updateEntryAction } from "@/app/journals/actions";
 import { EntryDatePicker } from "@/components/entry-date-picker";
 import { FieldError } from "@/components/field-error";
+import { JevStatusBadge } from "@/components/jev-status-badge";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { useUnsavedWriting } from "@/components/unsaved-writing";
@@ -19,12 +20,6 @@ import { cn } from "cn";
 
 const subscribe = () => () => {};
 const serverDate = () => "";
-const jevIssueKeys: Record<"grammar" | "vocabulary" | "spelling" | "style", keyof Dictionary> = {
-  grammar: "jevGrammar",
-  vocabulary: "jevVocabulary",
-  spelling: "jevSpelling",
-  style: "jevStyle",
-};
 
 export function EntryForm({
   journalId,
@@ -146,9 +141,14 @@ export function EntryForm({
         />
       </div>
       <FieldError id={fieldId("date-error")} error={errors.entryDate} t={t} />
-      <label htmlFor={fieldId("entry-body")} className="flex min-h-11 items-center font-semibold">
-        {t.yourEntry}
-      </label>
+      <div className="flex shrink-0 flex-wrap items-center gap-x-3 gap-y-1">
+        <label htmlFor={fieldId("entry-body")} className="flex min-h-11 items-center font-semibold">
+          {t.yourEntry}
+        </label>
+        <div id={fieldId("jev-note")} aria-live="polite" className="min-w-0 max-w-full">
+          <JevStatusBadge checking={checking} judgement={judgement} t={t} />
+        </div>
+      </div>
       <Textarea
         id={fieldId("entry-body")}
         name="body"
@@ -181,17 +181,6 @@ export function EntryForm({
       <FieldError id={fieldId("journal-error")} error={errors.journalId} t={t} />
       <FieldError id={fieldId("form-error")} error={errors.form} t={t} />
       <div className="writing-save flex shrink-0 flex-col gap-2 bg-background py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
-        <div id={fieldId("jev-note")} aria-live="polite" className="text-sm text-muted-foreground">
-          {checking
-            ? t.jevChecking
-            : judgement
-              ? judgement.issue === "uncertain"
-                ? t.jevUncertain
-                : judgement.issue === "none"
-                  ? t.jevNoIssues
-                  : `${t[jevIssueKeys[judgement.issue]]} ${t.jevDetails}`
-              : null}
-        </div>
         <div className="flex gap-3">
           {onCancel && (
             <Button
