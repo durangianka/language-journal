@@ -9,21 +9,25 @@ export function JournalLayout({
   back,
   backLabel,
   heading,
+  navigation,
 }: {
   title: string;
   children: ReactNode;
   back: string;
   backLabel: string;
   heading?: ReactNode;
+  navigation?: ReactNode;
 }) {
   return (
     <main className="mx-auto flex w-full max-w-xl flex-1 flex-col gap-6 px-4 py-6 sm:py-10">
-      <Link
-        href={back}
-        className="inline-flex min-h-11 min-w-11 items-center self-start rounded-sm text-sm underline underline-offset-4 focus-visible:outline-2"
-      >
-        {backLabel}
-      </Link>
+      {navigation ?? (
+        <Link
+          href={back}
+          className="inline-flex min-h-11 min-w-11 items-center self-start rounded-sm text-sm underline underline-offset-4 focus-visible:outline-2"
+        >
+          {backLabel}
+        </Link>
+      )}
       {heading ?? <h1 className="text-3xl font-semibold tracking-tight">{title}</h1>}
       {children}
     </main>

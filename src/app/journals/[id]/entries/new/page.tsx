@@ -1,18 +1,30 @@
-import { notFound } from "next/navigation";
-import { EntryForm } from "@/components/entry-form";
+import { Suspense } from "react";
 import { JournalLayout } from "@/components/journal-layout";
+import { NewEntryBackLink, NewEntryForm, NewEntryFormSkeleton } from "@/components/new-entry-form";
 import { getDictionary } from "@/i18n/server";
-import { getJournal } from "@/lib/journal";
-import { idSchema } from "@/lib/journal/schemas";
 
 export default async function NewEntryPage({ params }: { params: Promise<{ id: string }> }) {
-  const { id } = await params;
-  if (!idSchema.safeParse(id).success) notFound();
-  const [journal, t] = await Promise.all([getJournal(id), getDictionary()]);
-  if (!journal) notFound();
+  const t = await getDictionary();
   return (
-    <JournalLayout title={t.newEntry} back={`/journals/${id}`} backLabel={t.backToJournal}>
-      <EntryForm journalId={id} t={t} />
+    <JournalLayout
+      title={t.newEntry}
+      back="/journals"
+      backLabel={t.backToJournal}
+      navigation={
+        <Suspense
+          fallback={
+            <span aria-disabled="true" className="inline-flex min-h-11 items-center text-sm">
+              {t.backToJournal}
+            </span>
+          }
+        >
+          <NewEntryBackLink params={params} label={t.backToJournal} />
+        </Suspense>
+      }
+    >
+      <Suspense fallback={<NewEntryFormSkeleton t={t} />}>
+        <NewEntryForm params={params} t={t} />
+      </Suspense>
     </JournalLayout>
   );
 }
