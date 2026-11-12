@@ -143,6 +143,29 @@ test("pending transitions to ready and logs tokens without model text", async ()
     outputTokens: 34,
   });
 });
+
+test.each(["new", "basic", "intermediate", "advanced"] as const)(
+  "%s shorthand feedback uses the learner's level and preserves mixed meaning",
+  (level) => {
+    const prompt = feedbackPrompt({
+      ...job.input,
+      level,
+      analysedText: "tbh I studied A = 2 + B today.",
+    });
+    expect(prompt.instructions).toContain(`level ${level}`);
+    expect(prompt.instructions).toContain(
+      "Preserve the meaning of sentences containing formulas or numbers.",
+    );
+    expect(JSON.parse(prompt.input).entry).toBe("tbh I studied A = 2 + B today.");
+    if (level === "advanced") {
+      expect(prompt.instructions).toContain("flag informal shorthand as a style correction");
+      expect(prompt.instructions).not.toContain("For this New or Basic learner");
+    } else if (level === "new" || level === "basic") {
+      expect(prompt.instructions).toContain("gently show the standard form");
+      expect(prompt.instructions).not.toContain("flag informal shorthand as a style correction");
+    }
+  },
+);
 test("invalid output gets exactly one repair and keeps the original snapshot", async () => {
   const { store, provider } = fixture();
   provider.generate.mockResolvedValueOnce(result("{}"));

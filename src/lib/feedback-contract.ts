@@ -26,6 +26,7 @@ export const FEEDBACK_REASONS: readonly [
   "daily_cap_reached",
   "entry_limit_reached",
   "too_long",
+  "not_language_text",
 ] = [
   "timeout",
   "provider_error",
@@ -33,6 +34,7 @@ export const FEEDBACK_REASONS: readonly [
   "daily_cap_reached",
   "entry_limit_reached",
   "too_long",
+  "not_language_text",
 ];
 export type FeedbackReason = (typeof FEEDBACK_REASONS)[number];
 

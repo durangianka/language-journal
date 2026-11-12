@@ -3,6 +3,7 @@ import { locales, type Locale } from "../config/locales";
 export type { Locale } from "../config/locales";
 
 export type Dictionary = {
+  not_language_text: string;
   notifications: string;
   browseCalendar: string;
   noEntriesOnDay: string;

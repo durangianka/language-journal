@@ -1,6 +1,8 @@
 import type { Dictionary } from "../types";
 
 export const en = {
+  not_language_text:
+    "This does not appear to have sentence meaning in this journal's language: it looks like bare formulas or numbers, encoded text, random letters, code or another language. Please write sentences in this journal's language. Meaningful shorthand and sentences containing formulas are welcome.",
   notifications: "Notifications",
   browseCalendar: "Browse by date",
   noEntriesOnDay: "No entries on this day.",
