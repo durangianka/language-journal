@@ -1,6 +1,8 @@
 import type { Dictionary } from "../types";
 
 export const it = {
+  not_language_text:
+    "Questo non sembra avere un significato come frase nella lingua del diario: sembra contenere solo formule o numeri, testo codificato, lettere casuali, codice o un'altra lingua. Scrivi frasi nella lingua di questo diario. Sono ammesse abbreviazioni significative e frasi che contengono formule.",
   notifications: "Notifiche",
   browseCalendar: "Cerca per data",
   noEntriesOnDay: "Nessuna voce in questo giorno.",

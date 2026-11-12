@@ -6,7 +6,7 @@ import { jevQuestions } from "./contract";
 import type { JevStore } from "./service";
 
 export const jevStore: JevStore = {
-  async reserve(entryId) {
+  async reserve(entryId, questions = jevQuestions) {
     return db.transaction(async (tx) => {
       await tx.execute(sql`select pg_advisory_xact_lock(6142802)`);
       const [row] = await tx.select({ total: count() }).from(jevCalls).where(sql`
@@ -14,10 +14,7 @@ export const jevStore: JevStore = {
         and ${jevCalls.createdAt} < ((date_trunc('day', clock_timestamp() at time zone 'Europe/London') + interval '1 day') at time zone 'Europe/London')
       `);
       if (row.total >= 200) return null;
-      const [call] = await tx
-        .insert(jevCalls)
-        .values({ entryId, questions: jevQuestions })
-        .returning();
+      const [call] = await tx.insert(jevCalls).values({ entryId, questions }).returning();
       return call.id;
     });
   },
@@ -26,7 +23,7 @@ export const jevStore: JevStore = {
       .update(jevCalls)
       .set({
         answers,
-        confidence: answers?.main_issue.confidence ?? null,
+        confidence: answers?.text_kind?.confidence ?? answers?.main_issue.confidence ?? null,
         durationMs,
       })
       .where(eq(jevCalls.id, id));

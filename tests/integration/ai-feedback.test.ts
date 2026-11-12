@@ -3,8 +3,23 @@ import { and, count, eq, sql } from "drizzle-orm";
 import { afterAll, afterEach, expect, test, vi } from "vitest";
 vi.mock("server-only", () => ({}));
 import { client, db } from "../../src/db/client";
-import { entries, feedback, journalMistakeCounts, journals, modelCalls } from "../../src/db/schema";
-import { beginFeedback, feedbackStore, listFeedback } from "../../src/lib/ai/repository";
+import {
+  entries,
+  feedback,
+  journalMistakeCounts,
+  journals,
+  modelCalls,
+  jevCalls,
+} from "../../src/db/schema";
+import {
+  beginFeedback,
+  feedbackStore,
+  listFeedback,
+  refuseNonLanguageFeedback,
+} from "../../src/lib/ai/repository";
+import { checkEntryLanguage } from "../../src/lib/jev/service";
+import { jevStore } from "../../src/lib/jev/repository";
+import { testJevClient } from "../../src/lib/jev/test-client";
 import { runFeedback } from "../../src/lib/ai/service";
 import {
   createEntry,
@@ -47,6 +62,7 @@ const fake = {
 afterEach(async () => {
   for (const id of journalIds.splice(0)) await db.delete(journals).where(eq(journals.id, id));
   await db.delete(modelCalls);
+  await db.delete(jevCalls);
   fake.generate.mockClear();
 });
 afterAll(async () => {
@@ -249,6 +265,64 @@ test("deleting before background processing prevents sending hidden text", async
   await deleteEntry(entry.id, "soft");
   await runFeedback(job, feedbackStore, fake);
   expect(fake.generate).not.toHaveBeenCalled();
+});
+
+test("language refusal persists failure, costs one Jev call and releases the unused model slot", async () => {
+  const { entry } = await fixture();
+  const job = await beginFeedback(entry.id, "it");
+  const allowed = await checkEntryLanguage(
+    job.input.analysedText,
+    job.input.language,
+    job.entryId,
+    {
+      async judge(text, signal) {
+        const raw = (await testJevClient.judge(text, signal)) as Record<string, unknown>;
+        return {
+          ...raw,
+          text_kind: {
+            type: "choice",
+            choice: "encoded",
+            confidence: 0.99,
+            probabilities: {
+              standard_language: 0.01,
+              informal_language: 0,
+              mixed: 0,
+              encoded: 0.99,
+              formula_or_numbers: 0,
+              random: 0,
+              other_language: 0,
+            },
+          },
+        };
+      },
+    },
+    jevStore,
+  );
+  if (!allowed) await refuseNonLanguageFeedback(job);
+  else await runFeedback(job, feedbackStore, fake);
+  expect(allowed).toBe(false);
+  expect(fake.generate).not.toHaveBeenCalled();
+  expect((await listFeedback(entry.id))[0]).toMatchObject({
+    status: "failed",
+    reason: "not_language_text",
+    locale: "it",
+  });
+  expect(await db.select().from(modelCalls)).toEqual([]);
+  const calls = await db.select().from(jevCalls).where(eq(jevCalls.entryId, entry.id));
+  expect(calls).toHaveLength(1);
+  expect(calls[0].confidence).toBe(0.99);
+  expect(calls[0].answers).toMatchObject({ text_kind: { choice: "encoded" } });
+  const [record] = await db.select().from(feedback).where(eq(feedback.id, job.id));
+  expect(record.attempts).toBe(0);
+});
+
+test("a language refusal cannot erase a model call that has already started", async () => {
+  const { entry } = await fixture();
+  const job = await beginFeedback(entry.id, "en");
+  await runFeedback(job, feedbackStore, fake);
+  await refuseNonLanguageFeedback(job);
+  expect((await listFeedback(entry.id))[0].status).toBe("ready");
+  expect(await db.select().from(modelCalls)).toMatchObject([{ id: job.callId, outcome: "ready" }]);
 });
 
 test("failed repair persists public contract reason and attempt kinds", async () => {
