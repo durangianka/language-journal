@@ -54,7 +54,12 @@ export const en = {
   jevDetails: "Get feedback gives the detail.",
   journalInsight: "Journal insight",
   insightTopCategory: "Most of your mistakes this journal are {category}.",
-  insightNoMistakes: "Your insight appears after your first feedback.",
+  insightNoMistakes: "Your insight appears after 5 corrections ({count} of 5).",
+  insightCountsHeading: "Mistakes so far in this journal",
+  insightCountsScope:
+    "Counts cover all ready feedback in this journal. Deleted entries are not included.",
+  insightCorrection: "{count} correction",
+  insightCorrections: "{count} corrections",
   summariseJournal: "Summarise this journal",
   insightDailyLimit: "One summary per journal per day, within the daily model limit. Try tomorrow.",
   insightEmpty: "Write an entry before requesting a summary.",
