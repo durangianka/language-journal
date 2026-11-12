@@ -15,6 +15,7 @@ import { idSchema } from "../../lib/journal/schemas";
 import { localeSchema } from "../../config/locales";
 import type { ActionResult, EntryDto, FeedbackDto, Locale } from "../../lib/feedback-contract";
 import {
+  restoreDeleted,
   deleteEntry as removeEntry,
   deleteJournal as removeJournal,
   getEntry as readEntry,
@@ -88,4 +89,19 @@ export async function listEntries(journalId: string): Promise<EntryDto[]> {
 }
 export async function getEntry(entryId: string): Promise<EntryDto | null> {
   return readEntry(entryId);
+}
+
+export async function restoreDeletedAction(
+  id: string,
+  kind: "entry" | "journal",
+): Promise<ActionResult<null>> {
+  if (!idSchema.safeParse(id).success || !["entry", "journal"].includes(kind))
+    return { success: false, reason: "validation" };
+  try {
+    await restoreDeleted(id, kind);
+    revalidatePath("/journals", "layout");
+    return { success: true, data: null };
+  } catch {
+    return { success: false, reason: "unknown" };
+  }
 }

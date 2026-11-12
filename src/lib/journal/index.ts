@@ -168,14 +168,31 @@ export async function deleteEntry(id: string, mode: "soft" | "hard" = "soft") {
 export async function deleteJournal(id: string, mode: "soft" | "hard" = "soft") {
   idSchema.parse(id);
   await db.transaction(async (tx) => {
-    await tx.select({ id: journals.id }).from(journals).where(eq(journals.id, id)).for("update");
+    const [journal] = await tx
+      .select({ deletedAt: journals.deletedAt })
+      .from(journals)
+      .where(eq(journals.id, id))
+      .for("update");
+    if (!journal) return;
     if (mode === "hard") {
       await tx.delete(journals).where(eq(journals.id, id));
       return;
     }
+    if (journal.deletedAt) return;
+    const existing = await tx
+      .select({ deletedAt: entries.deletedAt })
+      .from(entries)
+      .where(eq(entries.journalId, id));
     const now = new Date();
+    // The marker identifies this deletion batch. Keep it distinct from earlier trash.
+    while (existing.some((entry) => entry.deletedAt?.getTime() === now.getTime())) {
+      now.setTime(now.getTime() + 1);
+    }
     await tx.update(journals).set({ deletedAt: now }).where(eq(journals.id, id));
-    await tx.update(entries).set({ deletedAt: now }).where(eq(entries.journalId, id));
+    await tx
+      .update(entries)
+      .set({ deletedAt: now })
+      .where(and(eq(entries.journalId, id), isNull(entries.deletedAt)));
     await refreshMistakeCounts(tx, id);
   });
 }
@@ -186,4 +203,45 @@ export async function getJournalMistakeCounts(journalId: string) {
     .from(journalMistakeCounts)
     .innerJoin(journals, eq(journalMistakeCounts.journalId, journals.id))
     .where(and(eq(journals.id, idSchema.parse(journalId)), isNull(journals.deletedAt)));
+}
+
+/** Restore only rows removed by the same journal deletion, preserving older trash. */
+export async function restoreDeleted(id: string, kind: "entry" | "journal") {
+  idSchema.parse(id);
+  return db.transaction(async (tx) => {
+    const source =
+      kind === "entry"
+        ? (
+            await tx
+              .select({ journalId: entries.journalId })
+              .from(entries)
+              .where(eq(entries.id, id))
+          )[0]
+        : { journalId: id };
+    if (!source) throw new Error("Unavailable");
+    const [journal] = await tx
+      .select()
+      .from(journals)
+      .where(eq(journals.id, source.journalId))
+      .for("update");
+    if (!journal) throw new Error("Unavailable");
+    if (kind === "journal") {
+      if (journal.deletedAt) {
+        await tx
+          .update(entries)
+          .set({ deletedAt: null })
+          .where(and(eq(entries.journalId, id), eq(entries.deletedAt, journal.deletedAt)));
+        await tx.update(journals).set({ deletedAt: null }).where(eq(journals.id, id));
+      }
+    } else {
+      if (journal.deletedAt) throw new Error("Journal unavailable");
+      const restored = await tx
+        .update(entries)
+        .set({ deletedAt: null })
+        .where(eq(entries.id, id))
+        .returning({ id: entries.id });
+      if (!restored.length) throw new Error("Entry unavailable");
+    }
+    await refreshMistakeCounts(tx, source.journalId);
+  });
 }

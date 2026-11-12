@@ -9,7 +9,10 @@ test("journal cards appear above the writing box and collapse on a 375px screen"
   page,
 }) => {
   await page.goto("/journals/new");
-  await page.getByRole("radio", { name: "Italian", exact: true }).check();
+  await page
+    .getByRole("group", { name: "Choose a language", exact: true })
+    .getByRole("button", { name: "Italian", exact: true })
+    .click();
   await page.getByRole("radio", { name: "Advanced · C1–C2", exact: true }).check();
   await page.getByRole("button", { name: "Create journal", exact: true }).tap();
   await expect(page).toHaveURL(/\/journals\/[a-f0-9-]+$/);

@@ -25,7 +25,7 @@ async function checkTouchTargets(page: Page) {
   );
   for (const target of await page
     .locator(
-      'a[href]:visible, button:visible, input:not([type="hidden"]):visible, textarea:visible, label:visible',
+      'a[href]:visible, button:visible, input:not([type="hidden"]):not([aria-hidden="true"]):visible, [role="radio"]:not([aria-hidden="true"]):visible, textarea:visible, label:visible',
     )
     .all()) {
     const box = await target.boundingBox();
@@ -44,7 +44,10 @@ test("creates a journal and saves an entry on a 375px touch screen", async ({ pa
   await checkTouchTargets(page);
   await page.screenshot({ path: "docs/screenshots/journal-pages/journals.png", fullPage: true });
   await page.getByRole("link", { name: "New journal", exact: true }).tap();
-  await page.getByRole("radio", { name: "English", exact: true }).check();
+  await page
+    .getByRole("group", { name: "Choose a language", exact: true })
+    .getByRole("button", { name: "English", exact: true })
+    .click();
   await expect(
     page.getByText("About CEFR A2, for example Cambridge A2 Key.", { exact: true }),
   ).toBeVisible();
@@ -110,7 +113,10 @@ test("entry limits count Unicode characters and show server validation without l
   page,
 }) => {
   await page.goto("/journals/new");
-  await page.getByRole("radio", { name: "English", exact: true }).check();
+  await page
+    .getByRole("group", { name: "Choose a language", exact: true })
+    .getByRole("button", { name: "English", exact: true })
+    .click();
   await page.getByRole("radio", { name: "New · A1", exact: true }).check();
   await page.getByRole("button", { name: "Create journal", exact: true }).tap();
   await expect(page).toHaveURL(/\/journals\/[a-f0-9-]+$/);
@@ -162,7 +168,10 @@ for (const { timezoneId, instant, day, label } of [
     }) => {
       await page.clock.setFixedTime(new Date(instant));
       await page.goto("/journals/new");
-      await page.getByRole("radio", { name: "English", exact: true }).check();
+      await page
+        .getByRole("group", { name: "Choose a language", exact: true })
+        .getByRole("button", { name: "English", exact: true })
+        .click();
       await page.getByRole("radio", { name: "New · A1", exact: true }).check();
       await page.getByRole("button", { name: "Create journal", exact: true }).tap();
       await expect(page).toHaveURL(/\/journals\/[a-f0-9-]+$/);
@@ -209,9 +218,11 @@ test("failed actions keep journal language and level and entry fields for retry"
   page,
 }) => {
   await page.goto("/journals/new");
-  const language = page.getByRole("radio", { name: "Spanish", exact: true });
+  const language = page
+    .getByRole("group", { name: "Choose a language", exact: true })
+    .getByRole("button", { name: "Spanish", exact: true });
   const level = page.getByRole("radio", { name: "Basic · A2", exact: true });
-  await language.check();
+  await language.click();
   await level.check();
   await page.getByRole("button", { name: "Travel", exact: true }).tap();
   await rejectInsert("journals", async () => {
@@ -220,7 +231,7 @@ test("failed actions keep journal language and level and entry fields for retry"
       "We could not save this. Your writing is still here. Please try again.",
     );
   });
-  await expect(language).toBeChecked();
+  await expect(language).toHaveAttribute("aria-pressed", "true");
   await expect(level).toBeChecked();
   await expect(page.getByRole("button", { name: "Travel", exact: true })).toHaveAttribute(
     "aria-pressed",
@@ -252,14 +263,14 @@ test("changing levels updates capacity and preserves the first chosen focus area
   page,
 }) => {
   await page.goto("/journals/new");
-  await page.locator('input[name="level"][value="advanced"]').check();
+  await page.getByRole("radio", { name: "Advanced · C1–C2", exact: true }).check();
   for (const name of ["Grammar", "Food", "Travel"])
     await page.getByRole("button", { name, exact: true }).tap();
   await expect(page.getByRole("button", { name: "Work", exact: true })).toBeDisabled();
-  await page.locator('input[name="level"][value="new"]').check();
+  await page.getByRole("radio", { name: "New · A1", exact: true }).check();
   await expect(page.locator('input[name="focus"]')).toHaveCount(1);
   await expect(page.locator('input[name="focus"]')).toHaveValue("grammar");
-  await page.locator('input[name="level"][value="basic"]').check();
+  await page.getByRole("radio", { name: "Basic · A2", exact: true }).check();
   await expect(page.getByRole("button", { name: "Food", exact: true })).toBeEnabled();
   await page.getByRole("button", { name: "Food", exact: true }).tap();
   await expect(page.getByRole("button", { name: "Travel", exact: true })).toBeDisabled();
@@ -285,13 +296,13 @@ for (const { locale, names, message } of [
   test(`New level blocks an extra focus chip in ${locale}`, async ({ page, context }) => {
     await context.addCookies([{ name: "locale", value: locale, url: "http://127.0.0.1:3100" }]);
     await page.goto("/journals/new");
-    await expect(page.locator("fieldset button[aria-pressed]")).toHaveCount(6);
-    await page.locator('input[name="level"][value="new"]').check();
+    await expect(page.locator("#journal-focus button[aria-pressed]")).toHaveCount(6);
+    await page.getByRole("radio").first().check();
     const [first, second] = names.map((name) => page.getByRole("button", { name, exact: true }));
     await first.tap();
     await expect(second).toBeDisabled();
     await expect(second).toHaveAttribute("aria-pressed", "false");
-    await expect(page.locator('fieldset button[aria-pressed="true"]')).toHaveCount(1);
+    await expect(page.locator('#journal-focus button[aria-pressed="true"]')).toHaveCount(1);
     await expect(page.locator('input[name="focus"]')).toHaveCount(1);
     await expect(page.locator("#focus-limit")).toHaveText(message);
     await first.tap();

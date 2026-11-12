@@ -21,8 +21,10 @@ export async function NewEntryForm({
 
   return (
     <JournalEntryGate entries={entries} t={t}>
-      <SentenceCards language={journal.language} level={journal.level} t={t} />
-      <EntryForm journalId={id} t={t} />
+      <div className="writing-workspace flex min-w-0 flex-col gap-4">
+        <SentenceCards language={journal.language} level={journal.level} t={t} />
+        <EntryForm journalId={id} t={t} />
+      </div>
     </JournalEntryGate>
   );
 }

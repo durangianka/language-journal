@@ -1,6 +1,15 @@
 import type { Dictionary } from "../types";
 
 export const en = {
+  notifications: "Notifications",
+  browseCalendar: "Browse by date",
+  noEntriesOnDay: "No entries on this day.",
+  originalText: "Original",
+  noCorrections: "No corrections needed.",
+  undo: "Undo",
+  restored: "Restored.",
+  restoreFailed: "We could not restore this. Please try again.",
+  words: "words",
   jevNoIssues: "No major issues detected",
   jevDetails: "Get feedback gives the detail.",
   journalInsight: "Journal insight",

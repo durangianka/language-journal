@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import { Badge } from "@/components/ui/badge";
 import { languageLabelKeys } from "@/config/domain";
 import type { Dictionary } from "@/i18n/types";
 import { getJournal } from "@/lib/journal";
@@ -21,7 +22,7 @@ export async function JournalDetails({
       <h1 className="text-3xl font-semibold tracking-tight">
         {t[languageLabelKeys[journal.language]]}
       </h1>
-      <p className="text-muted-foreground">{t[journal.level]}</p>
+      <Badge variant="secondary">{t[journal.level]}</Badge>
     </>
   );
 }

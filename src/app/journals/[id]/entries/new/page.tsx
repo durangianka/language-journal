@@ -7,6 +7,7 @@ export default async function NewEntryPage({ params }: { params: Promise<{ id: s
   const t = await getDictionary();
   return (
     <JournalLayout
+      className="writing-page"
       title={t.newEntry}
       back="/journals"
       backLabel={t.backToJournal}
