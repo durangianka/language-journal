@@ -42,6 +42,7 @@ async function checkTouchTargets(page: Page) {
 async function pickDate(page: Page, day: number) {
   await page.getByRole("button", { name: "Entry date", exact: true }).tap();
   await page.locator(`button[data-day="11/${day}/2026"]`).click();
+  await expect(page.locator('[data-slot="popover-content"]')).toBeHidden();
 }
 
 test("creates a journal and saves an entry on a 375px touch screen", async ({ page }) => {
@@ -265,7 +266,9 @@ test("failed actions keep journal language and level and entry fields for retry"
   await page.getByRole("button", { name: "Save entry", exact: true }).tap();
   await expect(page.getByRole("status")).toHaveText("Your feedback is ready.");
   await page.getByRole("link", { name: "Back to journal", exact: true }).click();
-  await expect(page.locator("main:visible li")).toContainText("Hoy escribo en español.");
+  await expect(
+    page.locator("main:visible li").filter({ hasText: "Hoy escribo en español." }),
+  ).toBeVisible();
 });
 
 test("changing levels updates capacity and preserves the first chosen focus areas", async ({

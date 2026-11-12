@@ -144,14 +144,14 @@
 }
 
 @media (max-width: 639px) {
-  .writing-workspace:has(textarea:focus) .sentence-hint-detail {
+  .writing-workspace:has(textarea:focus, details:focus-within) .sentence-hint-detail {
     display: none;
   }
-  .writing-workspace:has(textarea:focus) details ul > li {
+  .writing-workspace:has(textarea:focus, details:focus-within) details ul > li {
     width: 12rem;
     min-width: 12rem;
   }
-  .writing-workspace:has(textarea:focus) #sentence-structures-title {
+  .writing-workspace:has(textarea:focus, details:focus-within) #sentence-structures-title {
     display: none;
   }
 }
