@@ -47,6 +47,12 @@ export type Dictionary = {
   restoreFailed: string;
   words: string;
   jevNoIssues: string;
+  jevChecking: string;
+  jevUncertain: string;
+  jevGrammar: string;
+  jevVocabulary: string;
+  jevSpelling: string;
+  jevStyle: string;
   jevDetails: string;
   journalInsight: string;
   insightTopCategory: string;

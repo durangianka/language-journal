@@ -24,11 +24,11 @@ export async function judgeEntry(
   client: JevClient,
   store: JevStore,
 ): Promise<JevNote | null> {
-  if (Array.from(text.trim()).length < 40 || Array.from(text).length > 2000) return null;
+  if (Array.from(text.trim()).length < 8 || Array.from(text).length > 2000) return null;
   const answers = await queryEntry(text, entryId, client, store);
   const main = answers?.main_issue;
-  return main && main.confidence >= 0.85
-    ? { issue: main.choice, confidence: main.confidence }
+  return main
+    ? { issue: main.confidence >= 0.5 ? main.choice : "uncertain", confidence: main.confidence }
     : null;
 }
 
@@ -71,11 +71,18 @@ async function queryEntry(
     ]);
     answers = ("text_kind" in questions ? feedbackJevAnswersSchema : jevAnswersSchema).parse(raw);
     return answers;
-  } catch {
+  } catch (error) {
+    console.error("Jev check failed", {
+      error,
+      stack: error instanceof Error ? error.stack : undefined,
+    });
     return null;
   } finally {
     clearTimeout(timer);
-    if (id) await store.finish(id, answers, Date.now() - start).catch(() => {});
+    if (id)
+      await store.finish(id, answers, Date.now() - start).catch((error) => {
+        console.error("Jev call log failed", error);
+      });
   }
 }
 

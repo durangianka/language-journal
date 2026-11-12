@@ -14,7 +14,7 @@ export const textKindSchema = z.enum([
 export type TextKind = z.infer<typeof textKindSchema>;
 
 export const issueSchema = z.enum(["grammar", "vocabulary", "spelling", "style", "none"]);
-export type JevNote = { issue: z.infer<typeof issueSchema>; confidence: number };
+export type JevNote = { issue: z.infer<typeof issueSchema> | "uncertain"; confidence: number };
 export const jevQuestions = {
   main_issue: {
     type: "choice",

@@ -19,6 +19,12 @@ import { cn } from "cn";
 
 const subscribe = () => () => {};
 const serverDate = () => "";
+const jevIssueKeys: Record<"grammar" | "vocabulary" | "spelling" | "style", keyof Dictionary> = {
+  grammar: "jevGrammar",
+  vocabulary: "jevVocabulary",
+  spelling: "jevSpelling",
+  style: "jevStyle",
+};
 
 export function EntryForm({
   journalId,
@@ -57,12 +63,13 @@ export function EntryForm({
   const requestedDate = useSearchParams().get("date");
   const [body, setBody] = useState(initialEntry?.body ?? "");
   const [judgement, setJudgement] = useState<JevNote | null>(null);
+  const [checking, setChecking] = useState(false);
   const revision = useRef(0);
-  const lastChecked = useRef("");
   async function judgeOnBlur() {
-    if (Array.from(body.trim()).length < 40 || lastChecked.current === body) return;
-    lastChecked.current = body;
-    const currentRevision = revision.current;
+    if (Array.from(body.trim()).length < 8) return;
+    const currentRevision = ++revision.current;
+    setJudgement(null);
+    setChecking(true);
     try {
       const response = await fetch("/api/jev", {
         method: "POST",
@@ -74,6 +81,8 @@ export function EntryForm({
       if (revision.current === currentRevision) setJudgement(note);
     } catch {
       if (revision.current === currentRevision) setJudgement(null);
+    } finally {
+      if (revision.current === currentRevision) setChecking(false);
     }
   }
   // The server cannot know the device timezone. Leave the date blank until hydration.
@@ -103,7 +112,7 @@ export function EntryForm({
           setBody("");
           setEntryDate(null);
           setJudgement(null);
-          lastChecked.current = "";
+          setChecking(false);
           revision.current += 1;
           router.push(`/journals/${journalId}/entries/${result.id}`);
         }
@@ -151,6 +160,7 @@ export function EntryForm({
         onChange={(event) => {
           revision.current += 1;
           setJudgement(null);
+          setChecking(false);
           setBody(Array.from(event.target.value).slice(0, 2000).join(""));
         }}
         onBlur={() => void judgeOnBlur()}
@@ -159,13 +169,6 @@ export function EntryForm({
         aria-invalid={Boolean(errors.body)}
         aria-describedby={`${fieldId("character-count")} ${fieldId("body-error")} ${fieldId("jev-note")}`}
       />
-      <div id={fieldId("jev-note")} aria-live="polite" className="text-sm text-muted-foreground">
-        {judgement
-          ? judgement.issue === "none"
-            ? t.jevNoIssues
-            : `${t[judgement.issue]}. ${t.jevDetails}`
-          : null}
-      </div>
       <div className="flex flex-wrap justify-between gap-2 text-sm text-muted-foreground">
         <p>
           {body.trim() ? body.trim().split(/\s+/u).length : 0} {t.words}
@@ -177,22 +180,39 @@ export function EntryForm({
       <FieldError id={fieldId("body-error")} error={errors.body} t={t} />
       <FieldError id={fieldId("journal-error")} error={errors.journalId} t={t} />
       <FieldError id={fieldId("form-error")} error={errors.form} t={t} />
-      <div className="writing-save flex shrink-0 gap-3 bg-background py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
-        {onCancel && (
+      <div className="writing-save flex shrink-0 flex-col gap-2 bg-background py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
+        <div id={fieldId("jev-note")} aria-live="polite" className="text-sm text-muted-foreground">
+          {checking
+            ? t.jevChecking
+            : judgement
+              ? judgement.issue === "uncertain"
+                ? t.jevUncertain
+                : judgement.issue === "none"
+                  ? t.jevNoIssues
+                  : `${t[jevIssueKeys[judgement.issue]]} ${t.jevDetails}`
+              : null}
+        </div>
+        <div className="flex gap-3">
+          {onCancel && (
+            <Button
+              type="button"
+              variant="outline"
+              className="min-h-11 min-w-11 shrink-0"
+              disabled={pending}
+              onClick={onCancel}
+            >
+              {t.cancel}
+            </Button>
+          )}
           <Button
-            type="button"
-            variant="outline"
-            className="min-h-11 min-w-11 shrink-0"
-            disabled={pending}
-            onClick={onCancel}
+            type="submit"
+            className="min-h-11 min-w-0 flex-1"
+            disabled={pending || !entryDate}
           >
-            {t.cancel}
+            <Save aria-hidden="true" />
+            {pending ? t.saving : t.saveEntry}
           </Button>
-        )}
-        <Button type="submit" className="min-h-11 min-w-0 flex-1" disabled={pending || !entryDate}>
-          <Save aria-hidden="true" />
-          {pending ? t.saving : t.saveEntry}
-        </Button>
+        </div>
       </div>
     </form>
   );

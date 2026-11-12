@@ -5,6 +5,75 @@ import { testDatabaseUrl } from "../support/test-database-url";
 
 test.use({ viewport: { width: 375, height: 812 }, isMobile: true, hasTouch: true });
 
+test("short Spanish spelling hint stays beside Save at 375px and retries on each blur", async ({
+  page,
+}) => {
+  const journalId = randomUUID();
+  const sql = postgres(testDatabaseUrl());
+  let release = () => {};
+  let calls = 0;
+  let note: { issue: string; confidence: number } | null = { issue: "spelling", confidence: 0.5 };
+  let gate = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  try {
+    await sql`insert into journals (id, language, level) values (${journalId}, 'es', 'basic')`;
+    await page.route("**/api/jev", async (route) => {
+      calls += 1;
+      await gate;
+      await route.fulfill({ json: note });
+    });
+    await page.goto(`/journals/${journalId}/entries/new`);
+    const body = page.locator("#entry-body");
+    const hint = page.locator("#jev-note");
+    const save = page.getByRole("button", { name: "Save entry", exact: true });
+    await body.fill("1234567");
+    await save.focus();
+    await expect(hint).toBeEmpty();
+    expect(calls).toBe(0);
+    await body.fill("Hola amgo");
+    expect(calls).toBe(0);
+    await save.focus();
+    await expect(hint).toHaveText("Checking your text...");
+    await expect(save).toBeEnabled();
+    release();
+    await expect(hint).toHaveText("Possible spelling issue. Get feedback to see the fix.");
+    expect(calls).toBe(1);
+    await expect(hint).toBeInViewport();
+    await expect(save).toBeInViewport();
+    await page.evaluate(() => {
+      if (!window.visualViewport) throw new Error("visualViewport unavailable");
+      Object.defineProperty(window.visualViewport, "height", { configurable: true, value: 400 });
+      window.visualViewport.dispatchEvent(new Event("resize"));
+    });
+    await expect(page.locator(".writing-form")).toHaveAttribute("data-keyboard-open", "true");
+    const hintBox = await hint.boundingBox();
+    const saveBox = await save.boundingBox();
+    expect(hintBox).not.toBeNull();
+    expect(saveBox).not.toBeNull();
+    expect(hintBox!.y).toBeGreaterThanOrEqual(0);
+    expect(hintBox!.y + hintBox!.height).toBeLessThanOrEqual(saveBox!.y);
+    expect(saveBox!.y + saveBox!.height).toBeLessThanOrEqual(400);
+    await page.screenshot({ path: "test-results/jev-spelling-375-keyboard.png" });
+    gate = Promise.resolve();
+    note = { issue: "uncertain", confidence: 0.4 };
+    await body.focus();
+    await save.focus();
+    await expect(hint).toHaveText("Not sure yet. Get feedback to check.");
+    expect(calls).toBe(2);
+    note = null;
+    await body.focus();
+    await save.focus();
+    await expect(hint).toBeEmpty();
+    expect(calls).toBe(3);
+    await expect(save).toBeEnabled();
+  } finally {
+    release();
+    await sql`delete from journals where id = ${journalId}`;
+    await sql.end();
+  }
+});
+
 test("three corrections show the waiting insight at 375px", async ({ page }) => {
   const journalId = randomUUID();
   const sql = postgres(testDatabaseUrl());
@@ -40,7 +109,9 @@ test("blur shows a Jev note without an LLM call, saving works, insight displays 
       .locator("#entry-body")
       .fill("I goes to the market and buy some fresh fruit for dinner.");
     await page.locator("#entry-date").focus();
-    await expect(page.locator("#jev-note")).toHaveText("Grammar. Get feedback gives the detail.");
+    await expect(page.locator("#jev-note")).toHaveText(
+      "Possible grammar issue. Get feedback to see the fix.",
+    );
     const [jev] = await sql`select count(*)::integer as count from jev_calls`;
     expect(jev.count).toBeGreaterThan(0);
     const [calls] =
@@ -99,7 +170,7 @@ test("editing hides an old note and ignores an in-flight stale judgement", async
     const body = page.locator("#entry-body");
     await body.fill("Yesterday I goes to the market and buy some fresh fruit for dinner.");
     await page.locator("#entry-date").focus();
-    await expect(page.locator("#jev-note")).toContainText("Grammar");
+    await expect(page.locator("#jev-note")).toContainText("Possible grammar issue");
     let release: () => void = () => {};
     const gate = new Promise<void>((resolve) => {
       release = resolve;

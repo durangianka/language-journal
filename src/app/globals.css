@@ -210,7 +210,7 @@
     width: min(calc(100% - 2rem), 34rem);
   }
   .writing-form {
-    padding-bottom: 4.25rem;
+    padding-bottom: 8rem;
   }
 }
 
@@ -324,7 +324,7 @@
     box-shadow: 0 -2px 8px color-mix(in srgb, var(--foreground) 5%, transparent);
   }
   .writing-form {
-    padding-bottom: 5rem;
+    padding-bottom: 8rem;
   }
   .writing-page {
     height: auto;
