@@ -4,6 +4,20 @@ import type { JevClient } from "./service";
 export const testJevClient: JevClient = {
   async judge() {
     return {
+      text_kind: {
+        type: "choice",
+        choice: "standard_language",
+        confidence: 1,
+        probabilities: {
+          standard_language: 1,
+          informal_language: 0,
+          mixed: 0,
+          formula_or_numbers: 0,
+          encoded: 0,
+          random: 0,
+          other_language: 0,
+        },
+      },
       main_issue: {
         type: "choice",
         choice: "grammar",
