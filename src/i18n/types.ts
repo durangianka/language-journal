@@ -47,6 +47,7 @@ export type Dictionary = {
   journalActions: string;
   entryUnavailable: string;
   journalEntryLimitReached: string;
+  feedbackDemoNotice: string;
   sentenceStructures: string;
   showSentenceStructures: string;
   hideSentenceStructures: string;

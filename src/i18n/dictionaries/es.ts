@@ -46,6 +46,8 @@ export const es = {
   entryUnavailable: "Esta entrada no está disponible.",
   journalEntryLimitReached:
     "Este diario tiene 10 entradas. Crea otro diario para seguir escribiendo.",
+  feedbackDemoNotice:
+    "Vista previa de comentarios y eliminación. Los cambios quedan en este navegador hasta conectar el servidor.",
   sentenceStructures: "Estructuras de frases",
   showSentenceStructures: "Mostrar estructuras de frases",
   hideSentenceStructures: "Ocultar estructuras de frases",

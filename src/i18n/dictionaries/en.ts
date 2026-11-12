@@ -45,6 +45,8 @@ export const en = {
   journalActions: "Journal actions",
   entryUnavailable: "This entry is unavailable.",
   journalEntryLimitReached: "This journal has 10 entries. Start a new journal to keep writing.",
+  feedbackDemoNotice:
+    "Sample feedback and deletion preview. Changes stay in this browser until the backend is connected.",
   sentenceStructures: "Sentence structures",
   showSentenceStructures: "Show sentence structures",
   hideSentenceStructures: "Hide sentence structures",
