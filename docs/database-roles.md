@@ -3,7 +3,8 @@
 `scripts/db-roles.sql` provisions two PostgreSQL 17 login roles:
 
 - `journal_app`: CONNECT, schema USAGE, SELECT/INSERT/UPDATE on app tables,
-  and sequence USAGE. No DELETE, TRUNCATE, schema CREATE or table ownership.
+  sequence USAGE, and DELETE on journals and entries only. No DELETE on
+  `model_calls` or other tables, TRUNCATE, schema CREATE or table ownership.
 - `journal_migration`: owns the `public` schema, its existing tables, sequences
   and enums, and objects it creates. Database CREATE permits Drizzle's separate
   migration metadata schema. It has no cluster administration privileges.
@@ -46,18 +47,26 @@ separate administrator review. Never grant migration membership to the app.
 Future table/sequence grants apply only to objects created by
 `journal_migration` in `public`, not objects created by an administrator.
 
-Hard deletes are denied on every app table, including journals and entries.
-The current schema has no soft-delete field. A future soft-delete migration
-can use UPDATE; this script does not add columns or deletion behavior.
+Hard deletes are allowed on journals and entries. Their feedback, insights and
+mistake counts cascade away. `model_calls` rows survive with NULL source
+references, preserving the shared daily model budget and token counts. Direct
+DELETE on this ledger stays denied. Soft deletion uses `deleted_at` updates.
+Migration `0005_retain_model_call_usage` grants the same source-table DELETE
+rights when roles were provisioned before the tables existed, or when updating
+an existing installation. Default privileges keep DELETE denied on new tables.
 
 ## Throwaway verification
 
 Apply the existing `drizzle/*.sql` migrations, then run the role script to
 check ownership transfer. Connect as `journal_app` and insert a journal and
-entry, read them, and update the entry. DROP TABLE, DELETE and TRUNCATE must
-fail. As `journal_migration`, create a temporary check table in `public` with
+entry, read them, and update the entry. Hard-delete an entry and a journal and
+confirm their metering rows and counts survive with NULL references. Direct
+DELETE on `model_calls` and feedback, DROP TABLE and TRUNCATE must fail.
+`tests/support/database-roles-check.sql` exercises these operations with
+`SET ROLE journal_app`. As `journal_migration`, create a check table in `public` with
 a serial column, then verify the app can insert/read/update rows using its
 sequence without new grants, but cannot delete rows or drop the table.
-Also check provisioning before migrations on a fresh database. Finally drop
+Also check provisioning before migrations on a fresh database, applying the
+migrations with `SET ROLE journal_migration`. Finally drop
 the throwaway database as the administrator. On a disposable server, remove
 the container to discard the cluster-wide roles too.

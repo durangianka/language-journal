@@ -16,7 +16,13 @@ export default defineConfig({
   },
   projects: [{ name: "chromium", use: { ...devices["Desktop Chrome"] } }],
   webServer: {
-    env: { DATABASE_URL: databaseUrl, FEEDBACK_TEST_MODE: "1", OPENAI_API_KEY: "" },
+    env: {
+      DATABASE_URL: databaseUrl,
+      FEEDBACK_TEST_MODE: "1",
+      JEV_TEST_MODE: "1",
+      JEV_API_KEY: "",
+      OPENAI_API_KEY: "",
+    },
     command: development
       ? "pnpm dev --hostname 127.0.0.1 --port 3117"
       : "pnpm build && pnpm start --hostname 127.0.0.1 --port 3100",

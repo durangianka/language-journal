@@ -46,6 +46,7 @@ const fake = {
 };
 afterEach(async () => {
   for (const id of journalIds.splice(0)) await db.delete(journals).where(eq(journals.id, id));
+  await db.delete(modelCalls);
   fake.generate.mockClear();
 });
 afterAll(async () => {
@@ -114,16 +115,14 @@ test("concurrent entry requests stop at three, with no extra model reservation",
 test("daily cap reserves the fiftieth slot once across concurrent entries", async () => {
   const { journal, entry } = await fixture();
   const seed = await beginFeedback(entry.id, "en");
-  await db
-    .insert(modelCalls)
-    .values(
-      Array.from({ length: 48 }, () => ({
-        feedbackId: seed.id,
-        entryId: entry.id,
-        kind: "retry" as const,
-        outcome: "failed" as const,
-      })),
-    );
+  await db.insert(modelCalls).values(
+    Array.from({ length: 48 }, () => ({
+      feedbackId: seed.id,
+      entryId: entry.id,
+      kind: "retry" as const,
+      outcome: "failed" as const,
+    })),
+  );
   const other = await createEntry({ journalId: journal.id, body: "Otro texto." });
   const results = await Promise.allSettled([
     beginFeedback(entry.id, "en"),
@@ -151,17 +150,15 @@ test("daily cap reserves the fiftieth slot once across concurrent entries", asyn
 test("old calls do not count toward the current London day, including DST boundaries", async () => {
   const { entry } = await fixture();
   const first = await beginFeedback(entry.id, "en");
-  await db
-    .insert(modelCalls)
-    .values(
-      Array.from({ length: 50 }, () => ({
-        feedbackId: first.id,
-        entryId: entry.id,
-        kind: "retry" as const,
-        outcome: "failed" as const,
-        createdAt: new Date("2000-01-01Z"),
-      })),
-    );
+  await db.insert(modelCalls).values(
+    Array.from({ length: 50 }, () => ({
+      feedbackId: first.id,
+      entryId: entry.id,
+      kind: "retry" as const,
+      outcome: "failed" as const,
+      createdAt: new Date("2000-01-01Z"),
+    })),
+  );
   expect((await beginFeedback(entry.id, "en")).feedback.status).toBe("pending");
   const days = await db.execute(sql`select
     extract(epoch from ((timestamp '2026-03-30' at time zone 'Europe/London') - (timestamp '2026-03-29' at time zone 'Europe/London'))) / 3600 as spring,
@@ -170,7 +167,7 @@ test("old calls do not count toward the current London day, including DST bounda
   expect(Number(days[0].autumn)).toBe(25);
 });
 
-test("soft deletion hides entry and feedback, retains counts, hard deletion removes contributions and cascades", async () => {
+test("soft deletion hides entry, feedback and counts; hard deletion retains metering", async () => {
   const { journal, entry } = await fixture();
   const job = await beginFeedback(entry.id, "en");
   await runFeedback(job, feedbackStore, fake);
@@ -178,15 +175,18 @@ test("soft deletion hides entry and feedback, retains counts, hard deletion remo
   expect(await getEntry(entry.id)).toBeNull();
   expect(await listEntries(journal.id)).toEqual([]);
   expect(await listFeedback(entry.id)).toEqual([]);
-  expect(await getJournalMistakeCounts(journal.id)).toEqual([{ category: "grammar", count: 1 }]);
+  expect(await getJournalMistakeCounts(journal.id)).toEqual([]);
   await expect(beginFeedback(entry.id, "en")).rejects.toMatchObject({ reason: "validation" });
   await deleteEntry(entry.id, "hard");
   expect(await getJournalMistakeCounts(journal.id)).toEqual([]);
   expect(await db.select().from(feedback).where(eq(feedback.entryId, entry.id))).toEqual([]);
   expect(await db.select().from(modelCalls).where(eq(modelCalls.entryId, entry.id))).toEqual([]);
+  expect(await db.select().from(modelCalls).where(eq(modelCalls.id, job.callId))).toMatchObject([
+    { feedbackId: null, entryId: null, outcome: "ready" },
+  ]);
 });
 
-test("soft deleted journals hide child data and counts; hard delete cascades all tables", async () => {
+test("soft deleted journals hide child data and counts; hard delete retains metering", async () => {
   const { journal, entry } = await fixture();
   const job = await beginFeedback(entry.id, "en");
   await runFeedback(job, feedbackStore, fake);
@@ -202,7 +202,7 @@ test("soft deleted journals hide child data and counts; hard delete cascades all
       .select()
       .from(journalMistakeCounts)
       .where(eq(journalMistakeCounts.journalId, journal.id)),
-  ).toHaveLength(1);
+  ).toHaveLength(0);
   await expect(createEntry({ journalId: journal.id, body: "Hidden" })).rejects.toThrow();
   await deleteJournal(journal.id, "hard");
   expect(await db.select().from(entries).where(eq(entries.journalId, journal.id))).toEqual([]);

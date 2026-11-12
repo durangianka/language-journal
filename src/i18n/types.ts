@@ -3,6 +3,17 @@ import { locales, type Locale } from "../config/locales";
 export type { Locale } from "../config/locales";
 
 export type Dictionary = {
+  jevNoIssues: string;
+  jevDetails: string;
+  journalInsight: string;
+  insightTopCategory: string;
+  insightNoMistakes: string;
+  summariseJournal: string;
+  insightDailyLimit: string;
+  insightEmpty: string;
+  insightFailed: string;
+  insightPending: string;
+
   feedbackHeading: string;
   getFeedback: string;
   feedbackNoFeedback: string;

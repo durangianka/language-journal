@@ -2,5 +2,9 @@ import "dotenv/config";
 import { defineConfig } from "vitest/config";
 
 export default defineConfig({
-  test: { environment: "node", include: ["tests/live/**/*.test.ts"] },
+  test: {
+    environment: "node",
+    include: ["tests/live/**/*.test.ts"],
+    setupFiles: ["./tests/support/integration-environment.ts"],
+  },
 });

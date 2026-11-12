@@ -1,8 +1,9 @@
 import "server-only";
 
-import { and, count, desc, eq, isNull, sql } from "drizzle-orm";
+import { and, count, desc, eq, isNull } from "drizzle-orm";
 import { db } from "../../db/client";
-import { entries, feedback, journalMistakeCounts, journals } from "../../db/schema";
+import { entries, journalMistakeCounts, journals } from "../../db/schema";
+import { refreshMistakeCounts } from "../insight/counts";
 import { JournalFullError } from "./errors";
 import { latestFeedback, latestFeedbackForEntries } from "../ai/repository";
 import { LIMITS, type FeedbackDto } from "../feedback-contract";
@@ -157,33 +158,10 @@ export async function deleteEntry(id: string, mode: "soft" | "hard" = "soft") {
       .for("update");
     if (mode === "soft") {
       await tx.update(entries).set({ deletedAt: new Date() }).where(eq(entries.id, id));
-      return;
+    } else {
+      await tx.delete(entries).where(eq(entries.id, id));
     }
-    const history = await tx
-      .select({ corrections: feedback.corrections })
-      .from(feedback)
-      .where(and(eq(feedback.entryId, id), eq(feedback.status, "ready")));
-    for (const row of history)
-      for (const correction of row.corrections ?? []) {
-        await tx
-          .update(journalMistakeCounts)
-          .set({ count: sql`greatest(0, ${journalMistakeCounts.count} - 1)` })
-          .where(
-            and(
-              eq(journalMistakeCounts.journalId, source.journalId),
-              eq(journalMistakeCounts.category, correction.category),
-            ),
-          );
-      }
-    await tx
-      .delete(journalMistakeCounts)
-      .where(
-        and(
-          eq(journalMistakeCounts.journalId, source.journalId),
-          eq(journalMistakeCounts.count, 0),
-        ),
-      );
-    await tx.delete(entries).where(eq(entries.id, id));
+    await refreshMistakeCounts(tx, source.journalId);
   });
 }
 
@@ -198,6 +176,7 @@ export async function deleteJournal(id: string, mode: "soft" | "hard" = "soft") 
     const now = new Date();
     await tx.update(journals).set({ deletedAt: now }).where(eq(journals.id, id));
     await tx.update(entries).set({ deletedAt: now }).where(eq(entries.journalId, id));
+    await refreshMistakeCounts(tx, id);
   });
 }
 

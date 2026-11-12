@@ -1,6 +1,7 @@
 "use client";
 
-import { useActionState, useState, useSyncExternalStore } from "react";
+import { useActionState, useRef, useState, useSyncExternalStore } from "react";
+import type { JevNote } from "@/lib/jev/contract";
 import { useRouter } from "next/navigation";
 import { createEntryAction } from "@/app/journals/actions";
 import { FieldError } from "@/components/field-error";
@@ -16,6 +17,26 @@ const serverDate = () => "";
 export function EntryForm({ journalId, t }: { journalId: string; t: Dictionary }) {
   const router = useRouter();
   const [body, setBody] = useState("");
+  const [judgement, setJudgement] = useState<JevNote | null>(null);
+  const revision = useRef(0);
+  const lastChecked = useRef("");
+  async function judgeOnBlur() {
+    if (Array.from(body.trim()).length < 40 || lastChecked.current === body) return;
+    lastChecked.current = body;
+    const currentRevision = revision.current;
+    try {
+      const response = await fetch("/api/jev", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ journalId, text: body }),
+        signal: AbortSignal.timeout(5000),
+      });
+      const note: JevNote | null = response.ok ? await response.json() : null;
+      if (revision.current === currentRevision) setJudgement(note);
+    } catch {
+      if (revision.current === currentRevision) setJudgement(null);
+    }
+  }
   // The server cannot know the device timezone. Leave the date blank until hydration.
   const localToday = useSyncExternalStore(subscribe, today, serverDate);
   const [selectedDate, setEntryDate] = useState<string | null>(null);
@@ -56,11 +77,23 @@ export function EntryForm({ journalId, t }: { journalId: string; t: Dictionary }
         name="body"
         className="min-h-64 text-base"
         value={body}
-        onChange={(event) => setBody(Array.from(event.target.value).slice(0, 2000).join(""))}
+        onChange={(event) => {
+          revision.current += 1;
+          setJudgement(null);
+          setBody(Array.from(event.target.value).slice(0, 2000).join(""));
+        }}
+        onBlur={() => void judgeOnBlur()}
         required
         aria-invalid={Boolean(errors.body)}
-        aria-describedby="character-count body-error"
+        aria-describedby="character-count body-error jev-note"
       />
+      <div id="jev-note" aria-live="polite" className="text-sm text-muted-foreground">
+        {judgement
+          ? judgement.issue === "none"
+            ? t.jevNoIssues
+            : `${t[judgement.issue]}. ${t.jevDetails}`
+          : null}
+      </div>
       <p id="character-count" className="text-right text-sm text-muted-foreground">
         {Array.from(body).length} / 2000 {t.characters}
       </p>
