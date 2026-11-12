@@ -4,6 +4,7 @@ export type { Locale } from "../config/locales";
 
 export type Dictionary = {
   settings: string;
+  loadingFeedbackSettings: string;
   headerMenu: string;
   feedbackSettingsDescription: string;
   feedbackTone: string;

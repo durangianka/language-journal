@@ -2,6 +2,7 @@ import type { Dictionary } from "../types";
 
 export const en = {
   settings: "Settings",
+  loadingFeedbackSettings: "Loading settings…",
   headerMenu: "Menu",
   feedbackSettingsDescription:
     "Choose how feedback speaks to you. Your choices change the explanations, never the grammar rules or checks.",
