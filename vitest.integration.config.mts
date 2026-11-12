@@ -6,6 +6,7 @@ testDatabaseUrl();
 
 export default defineConfig({
   test: {
+    fileParallelism: false,
     environment: "node",
     include: ["tests/integration/**/*.test.ts"],
     globalSetup: ["./tests/support/database-setup.ts"],
