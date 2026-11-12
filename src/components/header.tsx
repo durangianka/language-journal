@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { HeaderMenu } from "@/components/header-menu";
 import { Button } from "@/components/ui/button";
 import { UnitedKingdomFlag } from "@/components/flags/united-kingdom";
 import { SpainFlag } from "@/components/flags/spain";
@@ -29,30 +30,33 @@ export function Header({ locale, dictionary: t }: IHeaderProps) {
         >
           {t.appName}
         </Link>
-        <nav aria-label={t.languages} className="flex shrink-0 gap-1">
-          {locales.map((value) => {
-            const { name, Flag } = languages[value];
-            return (
-              <form action={setLocale} key={value}>
-                <Button
-                  type="submit"
-                  name="locale"
-                  value={value}
-                  aria-label={name}
-                  title={name}
-                  aria-pressed={locale === value}
-                  variant={locale === value ? "outline" : "ghost"}
-                  className="min-h-11 gap-2"
-                >
-                  <span aria-hidden="true">
-                    <Flag title={name} />
-                  </span>
-                  <span>{name}</span>
-                </Button>
-              </form>
-            );
-          })}
-        </nav>
+        <div className="flex min-w-0 flex-wrap items-center gap-1">
+          <nav aria-label={t.languages} className="flex flex-wrap gap-1">
+            {locales.map((value) => {
+              const { name, Flag } = languages[value];
+              return (
+                <form action={setLocale} key={value}>
+                  <Button
+                    type="submit"
+                    name="locale"
+                    value={value}
+                    aria-label={name}
+                    title={name}
+                    aria-pressed={locale === value}
+                    variant={locale === value ? "outline" : "ghost"}
+                    className="min-h-11 gap-2"
+                  >
+                    <span aria-hidden="true">
+                      <Flag title={name} />
+                    </span>
+                    <span>{name}</span>
+                  </Button>
+                </form>
+              );
+            })}
+          </nav>
+          <HeaderMenu label={t.headerMenu} settingsLabel={t.settings} />
+        </div>
       </div>
     </header>
   );

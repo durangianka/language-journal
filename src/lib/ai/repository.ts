@@ -10,6 +10,7 @@ import { promptVersion } from "./prompt";
 import type { FeedbackJob, FeedbackStore } from "./service";
 import { dailyCallCap, requestLimit } from "./limits";
 import { LIMITS, type FeedbackDto, type FeedbackReason } from "../feedback-contract";
+import { getFeedbackSettings } from "../settings/repository";
 
 export class FeedbackRequestError extends Error {
   constructor(public readonly reason: FeedbackReason | "validation") {
@@ -91,7 +92,12 @@ export async function beginFeedback(
       journalId: journal.id,
       callId: call.id,
       feedback: toFeedbackDto(record),
-      input: { analysedText: entry.body, locale, ...profile },
+      input: {
+        analysedText: entry.body,
+        locale,
+        ...profile,
+        settings: await getFeedbackSettings(tx),
+      },
     };
   });
 }

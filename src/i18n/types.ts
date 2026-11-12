@@ -3,6 +3,28 @@ import { locales, type Locale } from "../config/locales";
 export type { Locale } from "../config/locales";
 
 export type Dictionary = {
+  settings: string;
+  loadingFeedbackSettings: string;
+  headerMenu: string;
+  feedbackSettingsDescription: string;
+  feedbackTone: string;
+  feedbackToneHint: string;
+  toneFormal: string;
+  toneFriendly: string;
+  toneSlang: string;
+  feedbackAddress: string;
+  feedbackAddressHint: string;
+  addressNeutral: string;
+  addressBro: string;
+  addressSis: string;
+  learnerGender: string;
+  learnerGenderHint: string;
+  genderUnspecified: string;
+  genderFemale: string;
+  genderMale: string;
+  saveFeedbackSettings: string;
+  feedbackSettingsSaved: string;
+  invalidFeedbackSettings: string;
   not_language_text: string;
   notifications: string;
   browseCalendar: string;

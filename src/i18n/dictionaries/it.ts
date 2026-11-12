@@ -1,6 +1,32 @@
 import type { Dictionary } from "../types";
 
 export const it = {
+  settings: "Impostazioni",
+  loadingFeedbackSettings: "Caricamento impostazioni…",
+  headerMenu: "Menu",
+  feedbackSettingsDescription:
+    "Scegli come ti parla il feedback. Le tue preferenze cambiano le spiegazioni, mai le regole grammaticali o i controlli.",
+  feedbackTone: "Tono",
+  feedbackToneHint:
+    "Formale è cortese e completo. Amichevole è caloroso e diretto. Colloquiale è informale e breve, sempre rispettoso.",
+  toneFormal: "Formale",
+  toneFriendly: "Amichevole",
+  toneSlang: "Colloquiale",
+  feedbackAddress: "Come rivolgersi a te",
+  feedbackAddressHint:
+    "Usato solo nelle spiegazioni, nella lingua dell'interfaccia. Il tono formale usa sempre una forma neutra.",
+  addressNeutral: "Neutro",
+  addressBro: "Fratello",
+  addressSis: "Sorella",
+  learnerGender: "Genere per la concordanza",
+  learnerGenderHint:
+    "Facoltativo. Usato solo quando la lingua di apprendimento richiede la concordanza di genere nel feedback. Senza indicazione si usano forme neutre.",
+  genderUnspecified: "Non indicato",
+  genderFemale: "Femminile",
+  genderMale: "Maschile",
+  saveFeedbackSettings: "Salva impostazioni",
+  feedbackSettingsSaved: "Impostazioni salvate.",
+  invalidFeedbackSettings: "Scegli una delle opzioni disponibili per ogni impostazione.",
   not_language_text:
     "Questo non sembra avere un significato come frase nella lingua del diario: sembra contenere solo formule o numeri, testo codificato, lettere casuali, codice o un'altra lingua. Scrivi frasi nella lingua di questo diario. Sono ammesse abbreviazioni significative e frasi che contengono formule.",
   notifications: "Notifiche",
