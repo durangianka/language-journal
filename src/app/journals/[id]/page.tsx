@@ -1,11 +1,8 @@
-import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import { EntriesList, EntriesListSkeleton } from "@/components/entries-list";
 import { JournalDetails, JournalDetailsSkeleton } from "@/components/journal-details";
-import { JournalLayout, JournalLink } from "@/components/journal-layout";
-import { buttonVariants } from "@/components/ui/button";
+import { JournalLayout } from "@/components/journal-layout";
 import { getDictionary, getLocale } from "@/i18n/server";
-import { idSchema } from "@/lib/journal/schemas";
 
 // Allow initial analysis, one retry and one repair, each with a 20 second timeout.
 export const maxDuration = 90;
@@ -29,25 +26,9 @@ export default async function JournalPage({
         </Suspense>
       }
     >
-      <Suspense
-        fallback={
-          <span aria-disabled="true" className={buttonVariants({ className: "min-h-11 w-full" })}>
-            {t.newEntry}
-          </span>
-        }
-      >
-        <NewEntryLink params={params} label={t.newEntry} />
-      </Suspense>
-      <h2 className="text-xl font-semibold">{t.entries}</h2>
       <Suspense fallback={<EntriesListSkeleton label={t.entries} />}>
         <EntriesList params={params} searchParams={searchParams} t={t} locale={locale} />
       </Suspense>
     </JournalLayout>
   );
-}
-
-async function NewEntryLink({ params, label }: { params: Promise<{ id: string }>; label: string }) {
-  const { id } = await params;
-  if (!idSchema.safeParse(id).success) notFound();
-  return <JournalLink href={`/journals/${id}/entries/new`}>{label}</JournalLink>;
 }

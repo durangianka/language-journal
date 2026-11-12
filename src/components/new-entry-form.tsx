@@ -1,9 +1,10 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { EntryForm } from "@/components/entry-form";
+import { JournalEntryGate } from "@/components/journal-review";
 import { SentenceCards } from "@/components/sentence-cards";
 import type { Dictionary } from "@/i18n/types";
-import { getJournal } from "@/lib/journal";
+import { getJournal, listEntries } from "@/lib/journal";
 import { idSchema } from "@/lib/journal/schemas";
 
 export async function NewEntryForm({
@@ -15,14 +16,18 @@ export async function NewEntryForm({
 }) {
   const { id } = await params;
   if (!idSchema.safeParse(id).success) notFound();
-  const journal = await getJournal(id);
+  const [journal, entries] = await Promise.all([getJournal(id), listEntries(id)]);
   if (!journal) notFound();
 
   return (
-    <>
+    <JournalEntryGate
+      id={id}
+      entries={entries.map((entry) => ({ ...entry, latestFeedback: null }))}
+      t={t}
+    >
       <SentenceCards language={journal.language} level={journal.level} t={t} />
       <EntryForm journalId={id} t={t} />
-    </>
+    </JournalEntryGate>
   );
 }
 
