@@ -77,7 +77,7 @@ test("creates a journal and saves an entry on a 375px touch screen", async ({ pa
   await page
     .getByLabel("Your entry", { exact: true })
     .fill("Today I practised writing in English.");
-  await expect(page.getByText("37 / 5000 characters", { exact: true })).toBeVisible();
+  await expect(page.getByText("37 / 2000 characters", { exact: true })).toBeVisible();
   await checkTouchTargets(page);
   await page.screenshot({ path: "docs/screenshots/journal-pages/new-entry.png", fullPage: true });
   await page.getByRole("button", { name: "Save entry", exact: true }).tap();
@@ -117,13 +117,13 @@ test("entry limits count Unicode characters and show server validation without l
   createdJournalId = new URL(page.url()).pathname.split("/")[2];
   await page.getByRole("link", { name: "New entry", exact: true }).tap();
   const body = page.getByLabel("Your entry", { exact: true });
-  await body.fill("😀".repeat(5001));
-  await expect(body).toHaveValue("😀".repeat(5000));
-  await expect(page.getByText("5000 / 5000 characters", { exact: true })).toBeVisible();
+  await body.fill("😀".repeat(2001));
+  await expect(body).toHaveValue("😀".repeat(2000));
+  await expect(page.getByText("2000 / 2000 characters", { exact: true })).toBeVisible();
   await body.fill("   ");
   await page.getByRole("button", { name: "Save entry", exact: true }).tap();
   await expect(page.locator("#body-error")).toHaveText(
-    "Write between 1 and 5000 characters. Your entry cannot be blank.",
+    "Write between 1 and 2000 characters. Your entry cannot be blank.",
   );
   await expect(body).toHaveValue("   ");
 });
