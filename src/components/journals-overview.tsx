@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { CalendarDays, Languages, NotebookPen, Signal } from "lucide-react";
 import { DeletedNotice } from "@/components/deleted-notice";
 import { FeedbackStatus } from "@/components/feedback-status";
 import { languageLabelKeys } from "@/config/domain";
@@ -14,11 +15,13 @@ export function JournalsOverview({
   entries,
   t,
   locale,
+  showEntries = true,
 }: {
   journals: Journal[];
   entries: EntryDto[];
   t: Dictionary;
   locale: Locale;
+  showEntries?: boolean;
 }) {
   return (
     <>
@@ -26,33 +29,55 @@ export function JournalsOverview({
       {journals.length === 0 ? (
         <p className="rounded-xl border p-5 text-muted-foreground">{t.emptyJournals}</p>
       ) : (
-        <ul className="flex flex-col gap-3">
-          {journals.map((journal) => (
-            <li key={journal.id} className="rounded-xl border">
-              <Link
-                href={`/journals/${journal.id}`}
-                className="flex min-h-11 flex-col gap-2 rounded-xl p-5 hover:bg-muted focus-visible:outline-2"
-              >
-                <span className="font-semibold">{t[languageLabelKeys[journal.language]]}</span>
-                <span className="text-sm">{t[journal.level]}</span>
-                <time dateTime={journal.createdAt} className="text-sm text-muted-foreground">
-                  {formatDate(journal.createdAt, locale)}
-                </time>
-              </Link>
-              {entries
-                .filter((entry) => entry.journalId === journal.id)
-                .map((entry) => (
-                  <Link
-                    key={entry.id}
-                    href={`/journals/${journal.id}/entries/${entry.id}`}
-                    className="mx-4 mb-3 flex min-h-11 flex-wrap items-center justify-between gap-2 rounded-lg border p-3 hover:bg-muted focus-visible:outline-2"
-                  >
-                    <time dateTime={entry.entryDate}>{formatDate(entry.entryDate, locale)}</time>
-                    <FeedbackStatus feedback={entry.latestFeedback} t={t} />
-                  </Link>
-                ))}
-            </li>
-          ))}
+        <ul className={showEntries ? "flex flex-col gap-3" : "grid gap-4 sm:grid-cols-2"}>
+          {journals.map((journal) => {
+            const journalEntries = entries.filter((entry) => entry.journalId === journal.id);
+            const lastEntry = journalEntries.reduce<string | null>(
+              (latest, entry) => (!latest || entry.entryDate > latest ? entry.entryDate : latest),
+              null,
+            );
+            return (
+              <li key={journal.id} className="rounded-xl border">
+                <Link
+                  href={`/journals/${journal.id}`}
+                  className="flex min-h-11 flex-col gap-2 rounded-xl p-5 hover:bg-muted focus-visible:outline-2"
+                >
+                  <span className="flex items-center gap-2 font-semibold">
+                    <Languages aria-hidden="true" className="size-5 shrink-0" />
+                    {t[languageLabelKeys[journal.language]]}
+                  </span>
+                  <span className="flex items-center gap-2 text-sm">
+                    <Signal aria-hidden="true" className="size-4 shrink-0" />
+                    {t[journal.level]}
+                  </span>
+                  <span className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <CalendarDays aria-hidden="true" className="size-4 shrink-0" />
+                    {t.lastEntry}:{" "}
+                    {lastEntry ? (
+                      <time dateTime={lastEntry}>{formatDate(lastEntry, locale)}</time>
+                    ) : (
+                      t.noEntriesYet
+                    )}
+                  </span>
+                  <span className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <NotebookPen aria-hidden="true" className="size-4 shrink-0" />
+                    {t.entries}: {journalEntries.length}
+                  </span>
+                </Link>
+                {showEntries &&
+                  journalEntries.map((entry) => (
+                    <Link
+                      key={entry.id}
+                      href={`/journals/${journal.id}/entries/${entry.id}`}
+                      className="mx-4 mb-3 flex min-h-11 flex-wrap items-center justify-between gap-2 rounded-lg border p-3 hover:bg-muted focus-visible:outline-2"
+                    >
+                      <time dateTime={entry.entryDate}>{formatDate(entry.entryDate, locale)}</time>
+                      <FeedbackStatus feedback={entry.latestFeedback} t={t} />
+                    </Link>
+                  ))}
+              </li>
+            );
+          })}
         </ul>
       )}
     </>

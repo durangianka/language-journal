@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState, useState } from "react";
+import { Languages, Plus, Signal } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { createJournalAction } from "@/app/journals/actions";
 import { FieldError } from "@/components/field-error";
@@ -46,7 +47,10 @@ export function JournalForm({ t }: { t: Dictionary }) {
     >
       <FieldGroup>
         <FieldSet aria-describedby="language-error">
-          <FieldLegend>{t.chooseLanguage}</FieldLegend>
+          <FieldLegend className="flex items-center gap-2">
+            <Languages aria-hidden="true" className="size-5" />
+            {t.chooseLanguage}
+          </FieldLegend>
           <input type="hidden" name="language" value={language ?? ""} />
           <ToggleGroup
             aria-invalid={Boolean(errors.language)}
@@ -81,7 +85,10 @@ export function JournalForm({ t }: { t: Dictionary }) {
           <FieldError id="language-error" error={errors.language} t={t} />
         </FieldSet>
         <FieldSet aria-describedby="level-error">
-          <FieldLegend>{t.chooseLevel}</FieldLegend>
+          <FieldLegend className="flex items-center gap-2">
+            <Signal aria-hidden="true" className="size-5" />
+            {t.chooseLevel}
+          </FieldLegend>
           <RadioGroup
             aria-invalid={Boolean(errors.level)}
             name="level"
@@ -165,6 +172,7 @@ export function JournalForm({ t }: { t: Dictionary }) {
       </FieldGroup>
       <div className="sticky bottom-0 bg-background py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
         <Button type="submit" className="min-h-11 w-full" disabled={pending}>
+          <Plus aria-hidden="true" />
           {pending ? t.saving : t.createJournal}
         </Button>
       </div>

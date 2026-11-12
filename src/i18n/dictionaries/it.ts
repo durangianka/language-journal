@@ -131,8 +131,9 @@ export const it = {
   homeDescription: "Uno spazio per il tuo percorso di apprendimento delle lingue.",
   journals: "Diari",
   journalNotFound: "Diario non disponibile",
-  emptyJournals:
-    "Crea un diario per esercitarti in una lingua. Scegli Nuovo diario, poi seleziona lingua e livello.",
+  emptyJournals: "Crea il tuo primo diario di lingue.",
+  lastEntry: "Ultima pagina",
+  noEntriesYet: "Nessuna pagina ancora",
   chooseLanguage: "Scegli una lingua",
   chooseLevel: "Scegli il tuo livello",
   new: "Principiante · A1",

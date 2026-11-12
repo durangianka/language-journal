@@ -1,3 +1,4 @@
+import { Lightbulb } from "lucide-react";
 import { notFound } from "next/navigation";
 import { getJournal, getJournalMistakeCounts } from "@/lib/journal";
 import { getTodayInsight } from "@/lib/insight/repository";
@@ -30,7 +31,10 @@ export async function JournalInsight({
   return (
     <Card aria-label={t.journalInsight}>
       <CardHeader>
-        <h2 className="font-semibold">{t.journalInsight}</h2>
+        <h2 className="flex items-center gap-2 font-semibold">
+          <Lightbulb aria-hidden="true" className="size-5" />
+          {t.journalInsight}
+        </h2>
       </CardHeader>
       <CardContent className="flex flex-col gap-4">
         {top.length ? (

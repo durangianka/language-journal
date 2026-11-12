@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { Pencil } from "lucide-react";
 import { EntryForm } from "@/components/entry-form";
 import { Button } from "@/components/ui/button";
 import { DeleteActions } from "@/components/delete-actions";
@@ -48,6 +49,7 @@ export function EntryDetail({
             className="min-h-11 self-start"
             onClick={() => setEditing(true)}
           >
+            <Pencil aria-hidden="true" />
             {t.editEntry}
           </Button>
           <EntryFeedback

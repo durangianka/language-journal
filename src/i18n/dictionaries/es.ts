@@ -129,8 +129,9 @@ export const es = {
   homeDescription: "Un espacio para aprender idiomas.",
   journals: "Diarios",
   journalNotFound: "Diario no disponible",
-  emptyJournals:
-    "Crea un diario para practicar un idioma. Elige Nuevo diario y selecciona tu idioma y nivel.",
+  emptyJournals: "Crea tu primer diario de idiomas.",
+  lastEntry: "Última entrada",
+  noEntriesYet: "Aún no hay entradas",
   chooseLanguage: "Elige un idioma",
   chooseLevel: "Elige tu nivel",
   new: "Nuevo · A1",
