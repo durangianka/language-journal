@@ -10,7 +10,7 @@ vi.mock("../../src/lib/ai/repository", () => ({
     }
   },
 }));
-vi.mock("../../src/lib/ai/openai", () => ({ openAIProvider: {} }));
+vi.mock("../../src/lib/ai/sdk", () => ({ openAIProvider: {} }));
 vi.mock("../../src/lib/ai/service", () => ({ runFeedback: vi.fn() }));
 vi.mock("../../src/lib/journal", () => ({
   deleteEntry: vi.fn(),

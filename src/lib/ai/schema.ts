@@ -22,30 +22,6 @@ export const feedbackOutputSchema = z.strictObject({
 });
 export type FeedbackOutput = z.infer<typeof feedbackOutputSchema>;
 
-export const outputJsonSchema = {
-  type: "object",
-  additionalProperties: false,
-  required: ["corrected_text", "corrections"],
-  properties: {
-    corrected_text: { type: "string", maxLength: LIMITS.entryMaxChars },
-    corrections: {
-      type: "array",
-      maxItems: LIMITS.correctionsPerFeedback,
-      items: {
-        type: "object",
-        additionalProperties: false,
-        required: ["original", "fix", "category", "explanation"],
-        properties: {
-          original: { type: "string", minLength: 1 },
-          fix: { type: "string", maxLength: LIMITS.entryMaxChars },
-          category: { type: "string", enum: categories },
-          explanation: { type: "string", minLength: 1, maxLength: LIMITS.explanationMaxChars },
-        },
-      },
-    },
-  },
-};
-
 export class InvalidFeedback extends Error {
   constructor(
     public readonly reason: "invalid_json" | "invalid_schema" | "invalid_span" | "wrong_locale",

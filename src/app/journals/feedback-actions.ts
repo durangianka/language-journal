@@ -8,7 +8,7 @@ import {
   feedbackStore,
   latestFeedback,
 } from "../../lib/ai/repository";
-import { openAIProvider } from "../../lib/ai/openai";
+import { openAIProvider } from "../../lib/ai/sdk";
 import { testFeedbackProvider } from "../../lib/ai/test-provider";
 import { runFeedback } from "../../lib/ai/service";
 import { idSchema } from "../../lib/journal/schemas";
