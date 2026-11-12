@@ -49,7 +49,7 @@ test("calendar finds entries and an empty day starts a dated entry at 375px", as
   await page.locator('button[data-day="11/12/2026"]').tap();
   await expect(page.getByText("No entries on this day.", { exact: true })).toBeVisible();
   await page.locator(`a[href="/journals/${journalId}/entries/new?date=2026-11-12"]`).tap();
-  await expect(page.getByLabel("Entry date", { exact: true })).toHaveValue("2026-11-12");
+  await expect(page.locator('input[name="entryDate"]')).toHaveValue("2026-11-12");
   await page.getByLabel("Your entry", { exact: true }).fill("Today I read a new story in English.");
   await expect(page.getByText("8 words", { exact: true })).toBeVisible();
   const save = page.getByRole("button", { name: "Save entry", exact: true });
