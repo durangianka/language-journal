@@ -21,15 +21,15 @@ test("journal cards appear above the writing box and collapse on a 375px screen"
   try {
     await page.getByRole("link", { name: "New entry", exact: true }).tap();
     const cards = page.getByRole("region", { name: "Sentence structures", exact: true });
-    const toggle = cards.locator("summary");
+    const toggle = cards.getByRole("button");
     const body = page.getByRole("textbox", { name: "Your entry", exact: true });
-    await expect(cards.getByRole("listitem")).toHaveCount(4);
+    await expect(cards.locator("li:visible")).toHaveCount(1);
     await expect(
       cards.getByRole("heading", { name: "Opinion + subjunctive", exact: true }),
     ).toBeVisible();
     await expect(cards.getByText("penso che + subjunctive", { exact: true })).toBeVisible();
     await expect(cards.getByText("Penso che sia una buona idea.", { exact: true })).toBeVisible();
-    await expect(toggle).toHaveText("Show sentence structuresHide sentence structures");
+    await expect(toggle).toHaveText("See more");
     const cardBox = await cards.boundingBox();
     const bodyBox = await body.boundingBox();
     const toggleBox = await toggle.boundingBox();
@@ -45,17 +45,16 @@ test("journal cards appear above the writing box and collapse on a 375px screen"
 
     await body.fill("Una giornata tranquilla.");
     await toggle.tap();
-    await expect(cards.getByRole("list")).toBeHidden();
-    await expect(toggle.getByText("Show sentence structures", { exact: true })).toBeVisible();
+    await expect(cards.locator("li:visible")).toHaveCount(4);
+    await expect(toggle).toHaveText("See less");
     await expect(body).toBeVisible();
     await expect(body).toHaveValue("Una giornata tranquilla.");
     await toggle.tap();
-    await expect(cards.getByRole("list")).toBeVisible();
-    await expect(toggle.getByText("Hide sentence structures", { exact: true })).toBeVisible();
+    await expect(cards.locator("li:visible")).toHaveCount(1);
+    await expect(toggle).toHaveText("See more");
 
     await page.setViewportSize({ width: 1280, height: 900 });
-    await page.reload();
-    await expect(cards.getByRole("list")).toBeVisible();
+    await expect(cards.locator("li:visible")).toHaveCount(4);
   } finally {
     const sql = postgres(testDatabaseUrl());
     try {
