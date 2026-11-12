@@ -1,6 +1,17 @@
 import type { Dictionary } from "../types";
 
 export const en = {
+  jevNoIssues: "No major issues detected",
+  jevDetails: "Get feedback gives the detail.",
+  journalInsight: "Journal insight",
+  insightTopCategory: "Most of your mistakes this journal are {category}.",
+  insightNoMistakes: "No mistakes recorded yet.",
+  summariseJournal: "Summarise this journal",
+  insightDailyLimit: "One summary per journal per day, within the daily model limit. Try tomorrow.",
+  insightEmpty: "Write an entry before requesting a summary.",
+  insightFailed: "We could not summarise this journal. Try again tomorrow.",
+  insightPending: "Summarising your journal…",
+
   feedbackHeading: "Feedback",
   getFeedback: "Get feedback",
   feedbackNoFeedback: "No feedback yet. Get feedback on your saved writing.",

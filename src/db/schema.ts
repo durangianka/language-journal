@@ -2,6 +2,7 @@ import { sql } from "drizzle-orm";
 import {
   check,
   date,
+  doublePrecision,
   index,
   integer,
   jsonb,
@@ -11,6 +12,7 @@ import {
   text,
   timestamp,
   uuid,
+  uniqueIndex,
 } from "drizzle-orm/pg-core";
 
 import { maxFocusByLevel } from "../config/focus";
@@ -109,13 +111,10 @@ export const modelCalls = pgTable(
   "model_calls",
   {
     id: uuid("id").defaultRandom().primaryKey(),
-    feedbackId: uuid("feedback_id")
-      .notNull()
-      .references(() => feedback.id, { onDelete: "cascade" }),
-    entryId: uuid("entry_id")
-      .notNull()
-      .references(() => entries.id, { onDelete: "cascade" }),
-    kind: text("kind", { enum: ["analysis", "retry", "repair"] }).notNull(),
+    feedbackId: uuid("feedback_id").references(() => feedback.id, { onDelete: "cascade" }),
+    entryId: uuid("entry_id").references(() => entries.id, { onDelete: "cascade" }),
+    journalId: uuid("journal_id").references(() => journals.id, { onDelete: "cascade" }),
+    kind: text("kind", { enum: ["analysis", "retry", "repair", "insight"] }).notNull(),
     outcome: text("outcome", { enum: ["reserved", "running", "ready", "failed"] }).notNull(),
     reasonCode: text("reason_code", { enum: FEEDBACK_REASONS }),
     durationMs: integer("duration_ms"),
@@ -127,11 +126,54 @@ export const modelCalls = pgTable(
     index("model_calls_feedback_idx").on(t.feedbackId),
     index("model_calls_entry_idx").on(t.entryId),
     index("model_calls_created_idx").on(t.createdAt),
-    check("model_calls_kind_valid", sql`${t.kind} in ('analysis', 'retry', 'repair')`),
+    index("model_calls_journal_idx").on(t.journalId),
+    check("model_calls_kind_valid", sql`${t.kind} in ('analysis', 'retry', 'repair', 'insight')`),
+    check(
+      "model_calls_source_valid",
+      sql`(${t.kind} = 'insight' and ${t.journalId} is not null) or (${t.kind} <> 'insight' and ${t.feedbackId} is not null and ${t.entryId} is not null)`,
+    ),
     check(
       "model_calls_outcome_valid",
       sql`${t.outcome} in ('reserved', 'running', 'ready', 'failed')`,
     ),
+  ],
+);
+
+export const jevCalls = pgTable(
+  "jev_calls",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    entryId: uuid("entry_id").references(() => entries.id, { onDelete: "set null" }),
+    questions: jsonb("questions").notNull(),
+    answers: jsonb("answers"),
+    confidence: doublePrecision("confidence"),
+    durationMs: integer("duration_ms"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    index("jev_calls_created_idx").on(t.createdAt),
+    index("jev_calls_entry_idx").on(t.entryId),
+  ],
+);
+
+export const journalInsights = pgTable(
+  "journal_insights",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    journalId: uuid("journal_id")
+      .notNull()
+      .references(() => journals.id, { onDelete: "cascade" }),
+    callId: uuid("call_id")
+      .notNull()
+      .references(() => modelCalls.id, { onDelete: "cascade" }),
+    day: date("day", { mode: "string" }).notNull(),
+    locale: text("locale", { enum: locales }).notNull(),
+    summary: text("summary"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    uniqueIndex("journal_insights_journal_day_idx").on(t.journalId, t.day),
+    check("journal_insights_locale_valid", sql`${t.locale} in ('en', 'es', 'it')`),
   ],
 );
 

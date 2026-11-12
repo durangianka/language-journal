@@ -29,6 +29,13 @@
       "when": 1794446293626,
       "tag": "0003_feedback_history_and_soft_delete",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1794474743450,
+      "tag": "0004_jev_calls_and_journal_insights",
+      "breakpoints": true
     }
   ]
 }

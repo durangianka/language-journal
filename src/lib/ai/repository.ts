@@ -1,7 +1,8 @@
 import "server-only";
 import { and, count, desc, eq, inArray, isNull, sql } from "drizzle-orm";
 import { db } from "../../db/client";
-import { entries, feedback, journalMistakeCounts, journals, modelCalls } from "../../db/schema";
+import { entries, feedback, journals, modelCalls } from "../../db/schema";
+import { refreshMistakeCounts } from "../insight/counts";
 import { localeSchema, type Locale } from "../../config/locales";
 import { createJournalSchema, idSchema } from "../journal/schemas";
 import { model } from "./provider";
@@ -18,7 +19,7 @@ export class FeedbackRequestError extends Error {
 type Transaction = Parameters<Parameters<typeof db.transaction>[0]>[0];
 
 // Serialize reservations across all app processes. No network I/O holds this lock.
-async function hasDailyRoom(tx: Transaction) {
+export async function hasDailyRoom(tx: Transaction) {
   await tx.execute(sql`select pg_advisory_xact_lock(6142801)`);
   const [row] = await tx.select({ total: count() }).from(modelCalls).where(sql`
     ${modelCalls.createdAt} >= (date_trunc('day', clock_timestamp() at time zone 'Europe/London') at time zone 'Europe/London')
@@ -155,15 +156,7 @@ export const feedbackStore: FeedbackStore = {
         .where(and(eq(feedback.id, job.id), eq(feedback.status, "pending")))
         .returning({ id: feedback.id });
       if (!rows.length) return;
-      for (const correction of output.corrections) {
-        await tx
-          .insert(journalMistakeCounts)
-          .values({ journalId: job.journalId, category: correction.category, count: 1 })
-          .onConflictDoUpdate({
-            target: [journalMistakeCounts.journalId, journalMistakeCounts.category],
-            set: { count: sql`${journalMistakeCounts.count} + 1` },
-          });
-      }
+      await refreshMistakeCounts(tx, job.journalId);
     });
   },
   async failed(id, reason) {
