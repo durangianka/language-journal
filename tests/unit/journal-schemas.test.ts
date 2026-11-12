@@ -92,7 +92,7 @@ describe("createEntrySchema", () => {
     expect(createEntrySchema.parse(input)).toEqual(input);
   });
 
-  test.each(["a".repeat(5000), "😀".repeat(5000)])("accepts 5000 characters (%#)", (body) => {
+  test.each(["a".repeat(2000), "😀".repeat(2000)])("accepts 2000 characters (%#)", (body) => {
     expect(createEntrySchema.parse({ journalId, body }).body).toBe(body);
   });
 
@@ -110,8 +110,8 @@ describe("createEntrySchema", () => {
     "\t\r\n",
     "\u00a0",
     "\u2003",
-    "a".repeat(5001),
-    "😀".repeat(5001),
+    "a".repeat(2001),
+    "😀".repeat(2001),
     null,
     123,
   ])("rejects invalid body (%#)", (body) => {
