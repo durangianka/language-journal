@@ -29,7 +29,7 @@ export function JournalsOverview({
       {journals.length === 0 ? (
         <p className="rounded-xl border p-5 text-muted-foreground">{t.emptyJournals}</p>
       ) : (
-        <ul className={showEntries ? "flex flex-col gap-3" : "grid gap-4 sm:grid-cols-2"}>
+        <ul className="grid items-start gap-4 sm:grid-cols-2">
           {journals.map((journal) => {
             const journalEntries = entries.filter((entry) => entry.journalId === journal.id);
             const lastEntry = journalEntries.reduce<string | null>(
@@ -37,12 +37,12 @@ export function JournalsOverview({
               null,
             );
             return (
-              <li key={journal.id} className="rounded-xl border">
+              <li key={journal.id} className="min-w-0 rounded-xl border bg-card">
                 <Link
                   href={`/journals/${journal.id}`}
                   className="flex min-h-11 flex-col gap-2 rounded-xl p-5 hover:bg-muted focus-visible:outline-2"
                 >
-                  <span className="flex items-center gap-2 font-semibold">
+                  <span className="flex items-center gap-2 font-heading text-[22px] font-semibold sm:text-[26px]">
                     <Languages aria-hidden="true" className="size-5 shrink-0" />
                     {t[languageLabelKeys[journal.language]]}
                   </span>
@@ -72,6 +72,15 @@ export function JournalsOverview({
                       className="mx-4 mb-3 flex min-h-11 flex-wrap items-center justify-between gap-2 rounded-lg border p-3 hover:bg-muted focus-visible:outline-2"
                     >
                       <time dateTime={entry.entryDate}>{formatDate(entry.entryDate, locale)}</time>
+                      <time dateTime={entry.createdAt} className="text-xs text-muted-foreground">
+                        {new Intl.DateTimeFormat(locale, {
+                          hour: "2-digit",
+                          minute: "2-digit",
+                        }).format(new Date(entry.createdAt))}
+                      </time>
+                      <strong className="line-clamp-1 w-full break-words [overflow-wrap:anywhere]">
+                        {entry.body}
+                      </strong>
                       <FeedbackStatus feedback={entry.latestFeedback} t={t} />
                     </Link>
                   ))}

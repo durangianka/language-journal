@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { Pencil, Settings, Trash2, Trash } from "lucide-react";
+import { MoreHorizontal, Pencil, Trash2, Trash } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { restoreDeletedAction } from "@/app/journals/feedback-actions";
@@ -59,7 +59,7 @@ export function DeleteActions({
       setOpen(false);
       if (mode === "soft") {
         toast(kind === "entry" ? t.entryMovedToTrash : t.journalMovedToTrash, {
-          duration: 10000,
+          duration: 6000,
           action: {
             label: t.undo,
             onClick: async () => {
@@ -89,22 +89,22 @@ export function DeleteActions({
   return (
     <section
       aria-label={kind === "entry" ? t.entryActions : t.journalActions}
-      className="mt-6 flex flex-col gap-3 border-t pt-6"
+      className="flex flex-col gap-3"
     >
-      <h2 className="font-semibold">{kind === "entry" ? t.entryActions : t.journalActions}</h2>
       <DropdownMenu>
         <DropdownMenuTrigger
           render={
             <Button
               ref={menuTrigger}
-              variant="outline"
-              className="min-h-11 w-full"
+              variant="ghost"
+              size="icon"
+              aria-label={kind === "entry" ? t.entryActions : t.journalActions}
+              className="size-11"
               disabled={busy}
             />
           }
         >
-          <Settings aria-hidden="true" />
-          {kind === "entry" ? t.entryActions : t.journalActions}
+          <MoreHorizontal aria-hidden="true" />
         </DropdownMenuTrigger>
         <DropdownMenuContent>
           <DropdownMenuGroup>
@@ -154,13 +154,16 @@ export function DeleteActions({
             </AlertDialogDescription>
           </AlertDialogHeader>
           {error && <p role="alert">{t.deleteFailed}</p>}
-          <AlertDialogFooter className="sm:flex-col">
-            <AlertDialogCancel className="min-h-11 w-full whitespace-normal" disabled={busy}>
+          <AlertDialogFooter className="grid grid-cols-2">
+            <AlertDialogCancel
+              className="min-h-11 min-w-0 w-full whitespace-normal"
+              disabled={busy}
+            >
               {t.cancel}
             </AlertDialogCancel>
             <AlertDialogAction
               variant="destructive"
-              className="min-h-11 w-full whitespace-normal"
+              className="min-h-11 min-w-0 w-full whitespace-normal"
               disabled={busy}
               onClick={() => void remove("hard")}
             >

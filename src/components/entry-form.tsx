@@ -9,6 +9,7 @@ import { EntryDatePicker } from "@/components/entry-date-picker";
 import { FieldError } from "@/components/field-error";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import { useUnsavedWriting } from "@/components/unsaved-writing";
 import type { Dictionary, Locale } from "@/i18n/types";
 import type { EntryDto } from "@/lib/feedback-contract";
 import type { ActionResult } from "@/lib/journal/action-input";
@@ -85,10 +86,16 @@ export function EntryForm({
         : null),
   );
   const entryDate = selectedDate ?? localToday;
+  const allowLeave = useUnsavedWriting(
+    body !== (initialEntry?.body ?? "") ||
+      (Boolean(initialEntry) && entryDate !== initialEntry?.entryDate),
+    t.unsavedChanges,
+  );
   const [state, action, pending] = useActionState<ActionResult | null, FormData>(
     async (_previous, form) => {
       const result = await (initialEntry ? updateEntryAction(form) : createEntryAction(form));
       if (result.success) {
+        allowLeave();
         if (initialEntry) {
           router.refresh();
           onSaved?.();
@@ -137,7 +144,7 @@ export function EntryForm({
         id={fieldId("entry-body")}
         name="body"
         className={cn(
-          "min-h-16 flex-1 resize-none overflow-y-auto text-base [field-sizing:fixed]",
+          "journal-prose min-h-50 w-full max-w-none flex-1 resize-y overflow-y-auto [field-sizing:fixed]",
           initialEntry && "min-h-64",
         )}
         value={body}

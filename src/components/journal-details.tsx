@@ -19,9 +19,7 @@ export async function JournalDetails({
 
   return (
     <>
-      <h1 className="text-3xl font-semibold tracking-tight">
-        {t[languageLabelKeys[journal.language]]}
-      </h1>
+      <h1 className="font-semibold tracking-tight">{t[languageLabelKeys[journal.language]]}</h1>
       <Badge variant="secondary">{t[journal.level]}</Badge>
     </>
   );

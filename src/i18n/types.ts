@@ -3,6 +3,17 @@ import { locales, type Locale } from "../config/locales";
 export type { Locale } from "../config/locales";
 
 export type Dictionary = {
+  interfaceLanguage: string;
+  journalLanguage: string;
+  seeMore: string;
+  seeLess: string;
+  unsavedChanges: string;
+  trash: string;
+  emptyTrash: string;
+  emptyTrashWarning: string;
+  trashEmpty: string;
+  restore: string;
+  trashDescription: string;
   settings: string;
   loadingFeedbackSettings: string;
   headerMenu: string;

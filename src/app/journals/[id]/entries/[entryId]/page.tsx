@@ -42,7 +42,12 @@ async function EntryContent({
   const [entry, journal] = await Promise.all([getEntry(entryId), getJournal(id)]);
   if (!entry || !journal || entry.journalId !== id) notFound();
   return (
-    <JournalLayout title={t.yourEntry} back={`/journals/${id}`} backLabel={t.backToJournal}>
+    <JournalLayout
+      className="max-w-6xl"
+      title={t.yourEntry}
+      back={`/journals/${id}`}
+      backLabel={t.backToJournal}
+    >
       <EntryDetail initialEntry={entry} language={journal.language} locale={locale} t={t} />
     </JournalLayout>
   );
