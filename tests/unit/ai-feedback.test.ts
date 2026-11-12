@@ -159,9 +159,15 @@ test.each(["new", "basic", "intermediate", "advanced"] as const)(
     expect(JSON.parse(prompt.input).entry).toBe("tbh I studied A = 2 + B today.");
     if (level === "advanced") {
       expect(prompt.instructions).toContain("flag informal shorthand as a style correction");
+      expect(prompt.instructions).toContain("only when the writing task is clearly formal");
+      expect(prompt.instructions).toContain(
+        "Otherwise tolerate purposeful, contextually appropriate shorthand",
+      );
       expect(prompt.instructions).not.toContain("For this New or Basic learner");
     } else if (level === "new" || level === "basic") {
-      expect(prompt.instructions).toContain("gently show the standard form");
+      expect(prompt.instructions).toContain(
+        "tolerate meaningful shorthand and gently show its standard form",
+      );
       expect(prompt.instructions).not.toContain("flag informal shorthand as a style correction");
     }
   },
