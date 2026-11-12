@@ -3,6 +3,7 @@ import { defineConfig, devices } from "@playwright/test";
 import { testDatabaseUrl } from "./tests/support/test-database-url";
 
 const databaseUrl = testDatabaseUrl();
+const development = process.env.PLAYWRIGHT_DEV_SERVER === "1";
 
 export default defineConfig({
   testDir: "./tests/e2e",
@@ -10,14 +11,16 @@ export default defineConfig({
   globalSetup: "./tests/support/database-setup.ts",
   workers: 1,
   use: {
-    baseURL: "http://127.0.0.1:3100",
+    baseURL: development ? "http://127.0.0.1:3117" : "http://127.0.0.1:3100",
     trace: "retain-on-failure",
   },
   projects: [{ name: "chromium", use: { ...devices["Desktop Chrome"] } }],
   webServer: {
     env: { DATABASE_URL: databaseUrl },
-    command: "pnpm build && pnpm start --hostname 127.0.0.1 --port 3100",
-    url: "http://127.0.0.1:3100",
+    command: development
+      ? "pnpm dev --hostname 127.0.0.1 --port 3117"
+      : "pnpm build && pnpm start --hostname 127.0.0.1 --port 3100",
+    url: development ? "http://127.0.0.1:3117" : "http://127.0.0.1:3100",
     reuseExistingServer: false,
     timeout: 120_000,
   },
