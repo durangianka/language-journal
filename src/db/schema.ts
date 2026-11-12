@@ -21,6 +21,28 @@ import { locales } from "../config/locales";
 import { categories } from "../config/corrections";
 import type { FeedbackOutput } from "../lib/ai/schema";
 import { FEEDBACK_REASONS } from "../lib/feedback-contract";
+import { feedbackTones, feedbackAddresses, learnerGenders } from "../lib/settings/schema";
+
+export const feedbackSettings = pgTable(
+  "feedback_settings",
+  {
+    id: integer("id").primaryKey().default(1),
+    tone: text("tone", { enum: feedbackTones }).notNull().default("formal"),
+    address: text("address", { enum: feedbackAddresses }).notNull().default("neutral"),
+    learnerGender: text("learner_gender", { enum: learnerGenders })
+      .notNull()
+      .default("unspecified"),
+  },
+  (t) => [
+    check("feedback_settings_single_learner", sql`${t.id} = 1`),
+    check("feedback_settings_tone_valid", sql`${t.tone} in ('formal', 'friendly', 'slang')`),
+    check("feedback_settings_address_valid", sql`${t.address} in ('neutral', 'bro', 'sis')`),
+    check(
+      "feedback_settings_gender_valid",
+      sql`${t.learnerGender} in ('unspecified', 'female', 'male')`,
+    ),
+  ],
+);
 
 export const languageEnum = pgEnum("language", languages);
 export const levelEnum = pgEnum("level", levels);

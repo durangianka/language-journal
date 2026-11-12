@@ -1,6 +1,31 @@
 import type { Dictionary } from "../types";
 
 export const en = {
+  settings: "Settings",
+  headerMenu: "Menu",
+  feedbackSettingsDescription:
+    "Choose how feedback speaks to you. Your choices change the explanations, never the grammar rules or checks.",
+  feedbackTone: "Tone",
+  feedbackToneHint:
+    "Formal is polite and complete. Friendly is warm and direct. Slang is casual and short, always respectful.",
+  toneFormal: "Formal",
+  toneFriendly: "Friendly",
+  toneSlang: "Slang",
+  feedbackAddress: "Form of address",
+  feedbackAddressHint:
+    "Used only in explanations, in your interface language. Formal tone always uses neutral address.",
+  addressNeutral: "Neutral",
+  addressBro: "Bro",
+  addressSis: "Sis",
+  learnerGender: "Gender for agreement",
+  learnerGenderHint:
+    "Optional. Used only when the target language needs gendered agreement in feedback. Leave unspecified for neutral wording.",
+  genderUnspecified: "Unspecified",
+  genderFemale: "Female",
+  genderMale: "Male",
+  saveFeedbackSettings: "Save settings",
+  feedbackSettingsSaved: "Settings saved.",
+  invalidFeedbackSettings: "Choose one of the available options for each setting.",
   notifications: "Notifications",
   browseCalendar: "Browse by date",
   noEntriesOnDay: "No entries on this day.",
