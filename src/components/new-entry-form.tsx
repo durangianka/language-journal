@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { EntryForm } from "@/components/entry-form";
+import { SentenceCards } from "@/components/sentence-cards";
 import type { Dictionary } from "@/i18n/types";
 import { getJournal } from "@/lib/journal";
 import { idSchema } from "@/lib/journal/schemas";
@@ -17,7 +18,12 @@ export async function NewEntryForm({
   const journal = await getJournal(id);
   if (!journal) notFound();
 
-  return <EntryForm journalId={id} t={t} />;
+  return (
+    <>
+      <SentenceCards language={journal.language} level={journal.level} t={t} />
+      <EntryForm journalId={id} t={t} />
+    </>
+  );
 }
 
 export async function NewEntryBackLink({
