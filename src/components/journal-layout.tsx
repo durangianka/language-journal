@@ -24,7 +24,7 @@ export function JournalLayout({
   return (
     <main
       className={cn(
-        "mx-auto flex w-full max-w-xl flex-1 flex-col gap-6 px-4 py-6 sm:py-10",
+        "mx-auto flex w-full max-w-2xl flex-1 flex-col gap-6 px-4 py-6 sm:px-8 sm:py-10",
         className,
       )}
     >
@@ -36,7 +36,7 @@ export function JournalLayout({
           {backLabel}
         </Link>
       )}
-      {heading ?? <h1 className="text-3xl font-semibold tracking-tight">{title}</h1>}
+      {heading ?? <h1 className="font-semibold tracking-tight">{title}</h1>}
       {children}
     </main>
   );

@@ -9,7 +9,7 @@ export default async function Home() {
   const [t, locale] = await Promise.all([getDictionary(), getLocale()]);
   return (
     <main className="mx-auto flex w-full max-w-5xl flex-1 flex-col gap-6 px-4 py-6 sm:px-6 sm:py-10">
-      <h1 className="text-3xl font-semibold tracking-tight">{t.appName}</h1>
+      <h1 className="font-semibold tracking-tight">{t.appName}</h1>
       <Link
         href="/journals/new"
         prefetch={false}

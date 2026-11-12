@@ -29,7 +29,7 @@ export async function JournalInsight({
     .sort((a, b) => b.count - a.count || a.category.localeCompare(b.category))
     .slice(0, 3);
   return (
-    <Card aria-label={t.journalInsight}>
+    <Card aria-label={t.journalInsight} className="bg-accent text-accent-foreground shadow-sm">
       <CardHeader>
         <h2 className="flex items-center gap-2 font-semibold">
           <Lightbulb aria-hidden="true" className="size-5" />
