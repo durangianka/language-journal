@@ -5,7 +5,7 @@ import { testDatabaseUrl } from "../support/test-database-url";
 
 test.use({ viewport: { width: 375, height: 812 }, isMobile: true, hasTouch: true });
 
-test("short Spanish spelling badge stays above the text box at 375px and retries on each blur", async ({
+test("short Spanish spelling badge stays above the text box at 375px and skips unchanged blur", async ({
   page,
 }) => {
   const journalId = randomUUID();
@@ -61,10 +61,14 @@ test("short Spanish spelling badge stays above the text box at 375px and retries
     note = { issue: "uncertain", confidence: 0.4 };
     await body.focus();
     await save.focus();
+    await expect(hint).toHaveText("Possible spelling issue Get feedback to see the fix");
+    expect(calls).toBe(1);
+    await body.fill("Hola amigo, otra frase.");
+    await save.focus();
     await expect(hint).toHaveText("Not sure about this one. Get feedback to check.");
     expect(calls).toBe(2);
     note = null;
-    await body.focus();
+    await body.fill("Hola amigo, una frase diferente.");
     await save.focus();
     await expect(hint).toBeEmpty();
     expect(calls).toBe(3);

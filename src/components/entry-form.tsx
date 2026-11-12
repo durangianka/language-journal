@@ -3,6 +3,12 @@
 import { useActionState, useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { Save } from "lucide-react";
 import type { JevNote } from "@/lib/jev/contract";
+import {
+  checkJevText,
+  clearJevPause,
+  scheduleJevPause,
+  type JevCheckSchedule,
+} from "@/lib/jev/check-schedule";
 import { useRouter, useSearchParams } from "next/navigation";
 import { createEntryAction, updateEntryAction } from "@/app/journals/actions";
 import { EntryDatePicker } from "@/components/entry-date-picker";
@@ -60,8 +66,15 @@ export function EntryForm({
   const [judgement, setJudgement] = useState<JevNote | null>(null);
   const [checking, setChecking] = useState(false);
   const revision = useRef(0);
-  async function judgeOnBlur() {
-    if (Array.from(body.trim()).length < 8) return;
+  const checkSchedule = useRef<JevCheckSchedule>({ lastText: null, timer: null });
+  useEffect(() => {
+    const schedule = checkSchedule.current;
+    return () => {
+      clearJevPause(schedule);
+      revision.current += 1;
+    };
+  }, []);
+  async function judgeText(text: string) {
     const currentRevision = ++revision.current;
     setJudgement(null);
     setChecking(true);
@@ -69,7 +82,7 @@ export function EntryForm({
       const response = await fetch("/api/jev", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ journalId, text: body }),
+        body: JSON.stringify({ journalId, text }),
         signal: AbortSignal.timeout(5000),
       });
       const note: JevNote | null = response.ok ? await response.json() : null;
@@ -109,6 +122,8 @@ export function EntryForm({
           setJudgement(null);
           setChecking(false);
           revision.current += 1;
+          clearJevPause(checkSchedule.current);
+          checkSchedule.current.lastText = null;
           router.push(`/journals/${journalId}/entries/${result.id}`);
         }
       }
@@ -161,9 +176,11 @@ export function EntryForm({
           revision.current += 1;
           setJudgement(null);
           setChecking(false);
-          setBody(Array.from(event.target.value).slice(0, 2000).join(""));
+          const text = Array.from(event.target.value).slice(0, 2000).join("");
+          setBody(text);
+          scheduleJevPause(checkSchedule.current, text, (value) => void judgeText(value));
         }}
-        onBlur={() => void judgeOnBlur()}
+        onBlur={() => checkJevText(checkSchedule.current, body, (value) => void judgeText(value))}
         required
         autoFocus={Boolean(initialEntry)}
         aria-invalid={Boolean(errors.body)}
