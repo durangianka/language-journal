@@ -21,7 +21,8 @@ Copy-Item .env.example .env
 ```
 
 The example credentials are for the local development database. If you change
-`POSTGRES_USER`, `POSTGRES_PASSWORD`, or `POSTGRES_DB`, also update `DATABASE_URL`.
+`POSTGRES_USER`, `POSTGRES_PASSWORD`, or `POSTGRES_DB`, also update `DATABASE_URL`
+and `TEST_DATABASE_URL` (keeping its database name `journal_test`).
 Leave `AI_PROVIDER_API_KEY` empty until a provider is chosen.
 
 Start Postgres on host port 5433 and run the app:
@@ -55,23 +56,41 @@ pnpm exec playwright install chromium
 pnpm test:e2e
 ```
 
-The browser test builds and starts its own production server on port 3100.
-It needs neither a running database nor an AI key.
+The browser tests build and start their own production server on port 3100.
+They need a running Postgres container, but no AI key.
 
 For schema changes, `pnpm db:generate` writes migrations to `drizzle/`
 and `pnpm db:migrate` applies them using `DATABASE_URL`.
 
-`pnpm test` runs unit tests without a database. Run the database integration test
-separately after starting Postgres and applying migrations:
+## Test layers and database isolation
+
+- `pnpm test`: unit tests with mocked external dependencies. Database clients,
+  sockets and fetch are blocked unless a test supplies its own mock.
+- `pnpm test:integration`: real Postgres and repository code, with no browser.
+- `pnpm test:e2e`: the real app, Chromium, server actions and Postgres, with no
+  mocked responses. The app server receives `TEST_DATABASE_URL` as `DATABASE_URL`.
+
+Start Postgres before running either database suite:
 
 ```sh
 pnpm db:up
-pnpm db:migrate
 pnpm test:integration
+pnpm test:e2e
 ```
 
-The integration test uses `DATABASE_URL` from the environment or `.env`, creates
-its own journal and entries, and deletes them even if an assertion fails.
+Both database suites load `DATABASE_URL` and `TEST_DATABASE_URL` from the environment
+or `.env`. Set `TEST_DATABASE_URL=postgres://journal:journal@localhost:5433/journal_test`
+for the default local container. Setup creates the database if missing, applies the
+committed Drizzle migrations and empties its public tables before every run and
+again at teardown. Migration history is preserved. The database user needs
+`CREATEDB` permission for the first run (the local container user has it).
+
+Startup refuses missing URLs, a database name without the `_test` suffix, the same
+database name as development (even with different credentials or loopback aliases),
+a different server or port, and URL query parameters that could override the target.
+No development tables are reset. Run database suites one at a time because they
+share `journal_test`. An interrupted run is cleaned at the next startup. Playwright
+never reuses an existing app server and uses one worker for shared database failure tests.
 
 ## Architecture
 
