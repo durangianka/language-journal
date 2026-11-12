@@ -115,7 +115,7 @@ for (const width of [375, 1280]) {
         await page.getByRole("textbox", { name: "Your entry", exact: true }).fill(original);
         await page.getByRole("button", { name: "Entry date", exact: true }).focus();
         await expect(page.locator("#jev-note")).toHaveText(
-          "Possible grammar issue. Get feedback to see the fix.",
+          "Possible grammar issue Get feedback to see the fix",
         );
         await touchTargets(page);
         await page.screenshot({ path: `${screenshotDirectory}/jev-${width}.png`, fullPage: true });
