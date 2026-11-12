@@ -109,6 +109,11 @@ export function EntryFeedback({
           </time>
         </p>
       )}
+      {feedback && new Date(entry.updatedAt) > new Date(feedback.createdAt) && (
+        <p role="note" className="text-sm text-muted-foreground">
+          {t.feedbackOutdated}
+        </p>
+      )}
       <Tabs defaultValue="corrected">
         <TabsList className="min-h-12 w-full" aria-label={t.yourEntry}>
           <TabsTrigger value="corrected" className="min-h-11">
@@ -199,7 +204,9 @@ export function EntryFeedback({
           ? t.feedbackPending
           : status === "failed"
             ? t.retryFeedback
-            : t.getFeedback}
+            : feedback
+              ? t.getFeedbackAgain
+              : t.getFeedback}
       </Button>
     </section>
   );

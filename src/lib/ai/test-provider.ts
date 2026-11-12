@@ -9,6 +9,8 @@ export const testFeedbackProvider: FeedbackProvider = {
     const database = new URL(process.env.DATABASE_URL ?? "").pathname;
     if (process.env.FEEDBACK_TEST_MODE !== "1" || !database.endsWith("_test"))
       throw new ProviderError("test_provider_requires_test_database");
+    // Simulate provider latency so browser tests can observe the pending screen.
+    await new Promise((resolve) => setTimeout(resolve, 1200));
     const examples = {
       en: { original: "I goes", fix: "I go" },
       es: { original: "Yo va", fix: "Yo voy" },

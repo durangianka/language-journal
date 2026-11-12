@@ -11,12 +11,10 @@ test("blur shows a Jev note without an LLM call, saving works, insight displays 
   const sql = postgres(testDatabaseUrl());
   try {
     await sql`insert into journals (id, language, level) values (${journalId}, 'en', 'basic')`;
-    await sql`insert into journal_mistake_counts (journal_id, category, count) values
-      (${journalId}, 'grammar', 4), (${journalId}, 'spelling', 2), (${journalId}, 'vocabulary', 1), (${journalId}, 'style', 1)`;
     await page.goto(`/journals/${journalId}/entries/new`);
     await page
       .locator("#entry-body")
-      .fill("Yesterday I goes to the market and buy some fresh fruit for dinner.");
+      .fill("I goes to the market and buy some fresh fruit for dinner.");
     await page.locator("#entry-date").focus();
     await expect(page.locator("#jev-note")).toHaveText("Grammar. Get feedback gives the detail.");
     const [jev] = await sql`select count(*)::integer as count from jev_calls`;
@@ -25,12 +23,11 @@ test("blur shows a Jev note without an LLM call, saving works, insight displays 
       await sql`select count(*)::integer as count from model_calls where journal_id = ${journalId}`;
     expect(calls.count).toBe(0);
     await page.getByRole("button", { name: "Save entry", exact: true }).click();
-    await expect(page).toHaveURL(new RegExp(`/journals/${journalId}(?:\\?saved=.*)?$`));
-    await expect(page.getByRole("status")).toContainText("New entry saved");
+    await expect(page).toHaveURL(new RegExp(`/journals/${journalId}/entries/[a-f0-9-]+$`));
+    await expect(page.getByRole("status")).toHaveText("Your feedback is ready.");
+    await page.getByRole("link", { name: "Back to journal", exact: true }).click();
     const card = page.getByLabel("Journal insight", { exact: true });
-    await expect(card).toContainText("Grammar: 4");
-    await expect(card).toContainText("Spelling: 2");
-    await expect(card).toContainText("Style: 1");
+    await expect(card).toContainText("Grammar: 1");
     await expect(card).toContainText("Most of your mistakes this journal are Grammar.");
     await card.getByRole("button", { name: "Summarise this journal" }).click();
     await expect(card).toContainText("Practise verb agreement in your next entry.");
@@ -59,7 +56,7 @@ test("slow Jev cannot delay saving", async ({ page }) => {
       .locator("#entry-body")
       .fill("Yesterday I goes to the market and buy some fresh fruit for dinner.");
     await page.getByRole("button", { name: "Save entry", exact: true }).click();
-    await expect(page).toHaveURL(new RegExp(`/journals/${journalId}(?:\\?saved=.*)?$`), {
+    await expect(page).toHaveURL(new RegExp(`/journals/${journalId}/entries/[a-f0-9-]+$`), {
       timeout: 3000,
     });
   } finally {

@@ -39,6 +39,12 @@ async function checkTouchTargets(page: Page) {
   }
 }
 
+async function pickDate(page: Page, day: number) {
+  await page.getByRole("button", { name: "Entry date", exact: true }).tap();
+  await page.locator(`button[data-day="11/${day}/2026"]`).click();
+  await expect(page.locator('[data-slot="popover-content"]')).toBeHidden();
+}
+
 test("creates a journal and saves an entry on a 375px touch screen", async ({ page }) => {
   await page.goto("/journals");
   await checkTouchTargets(page);
@@ -74,9 +80,9 @@ test("creates a journal and saves an entry on a 375px touch screen", async ({ pa
   await checkTouchTargets(page);
   await page.screenshot({ path: "docs/screenshots/journal-pages/journal.png", fullPage: true });
   await page.getByRole("link", { name: "New entry", exact: true }).tap();
-  const date = page.getByLabel("Entry date", { exact: true });
+  const date = page.locator('input[name="entryDate"]');
   await expect(date).toHaveValue(today());
-  await date.fill("2026-11-10");
+  await pickDate(page, 10);
   await page
     .getByLabel("Your entry", { exact: true })
     .fill("Today I practised writing in English.");
@@ -84,7 +90,8 @@ test("creates a journal and saves an entry on a 375px touch screen", async ({ pa
   await checkTouchTargets(page);
   await page.screenshot({ path: "docs/screenshots/journal-pages/new-entry.png", fullPage: true });
   await page.getByRole("button", { name: "Save entry", exact: true }).tap();
-  await expect(page.getByRole("status")).toHaveText("New entry savedNovember 10, 2026");
+  await expect(page.getByRole("status")).toHaveText("Your feedback is ready.");
+  await page.getByRole("link", { name: "Back to journal", exact: true }).click();
   await expect(page).toHaveURL(journalUrl);
   await expect(page.locator("main:visible li")).toHaveCount(1);
   await expect(page.locator("main:visible li").first()).toContainText(
@@ -98,9 +105,11 @@ test("creates a journal and saves an entry on a 375px touch screen", async ({ pa
 
   // A backdated entry stays below the first one, even though it was created later.
   await page.getByRole("link", { name: "New entry", exact: true }).tap();
-  await page.getByLabel("Entry date", { exact: true }).fill("2026-11-09");
+  await pickDate(page, 9);
   await page.getByLabel("Your entry", { exact: true }).fill("Yesterday I read a short story.");
   await page.getByRole("button", { name: "Save entry", exact: true }).tap();
+  await expect(page.getByRole("status")).toHaveText("Your feedback is ready.");
+  await page.getByRole("link", { name: "Back to journal", exact: true }).click();
   await expect(page.locator("main:visible li")).toHaveCount(2);
   await expect(page.locator("main:visible li").first()).toContainText("Today I practised");
   await expect(page.locator("main:visible li").last()).toContainText("Yesterday I read");
@@ -177,16 +186,16 @@ for (const { timezoneId, instant, day, label } of [
       await expect(page).toHaveURL(/\/journals\/[a-f0-9-]+$/);
       createdJournalId = new URL(page.url()).pathname.split("/")[2];
       await page.getByRole("link", { name: "New entry", exact: true }).tap();
-      await expect(page.getByLabel("Entry date", { exact: true })).toHaveValue(day);
+      await expect(page.locator('input[name="entryDate"]')).toHaveValue(day);
       await page.reload();
-      await expect(page.getByLabel("Entry date", { exact: true })).toHaveValue(day);
+      await expect(page.locator('input[name="entryDate"]')).toHaveValue(day);
       await page.getByLabel("Your entry", { exact: true }).fill("A local calendar day.");
       await page.getByRole("button", { name: "Save entry", exact: true }).tap();
-      await expect(page.getByRole("status")).toHaveText(`New entry saved${label}`);
-      await expect(page.locator("main:visible time")).toHaveText(label);
-      await expect(page.locator("main:visible time")).toHaveAttribute("datetime", day);
+      await expect(page.getByRole("status")).toHaveText("Your feedback is ready.");
+      await expect(page.locator("main:visible time").first()).toHaveText(label);
+      await expect(page.locator("main:visible time").first()).toHaveAttribute("datetime", day);
       await page.reload();
-      await expect(page.locator("main:visible time")).toHaveText(label);
+      await expect(page.locator("main:visible time").first()).toHaveText(label);
     });
   });
 }
@@ -244,9 +253,9 @@ test("failed actions keep journal language and level and entry fields for retry"
   await expect(page.locator("main:visible")).toContainText("Basic · A2");
 
   await page.getByRole("link", { name: "New entry", exact: true }).tap();
-  const date = page.getByLabel("Entry date", { exact: true });
+  const date = page.locator('input[name="entryDate"]');
   const body = page.getByLabel("Your entry", { exact: true });
-  await date.fill("2026-11-09");
+  await pickDate(page, 9);
   await body.fill("Hoy escribo en español.");
   await rejectInsert("entries", async () => {
     await page.getByRole("button", { name: "Save entry", exact: true }).tap();
@@ -255,8 +264,11 @@ test("failed actions keep journal language and level and entry fields for retry"
   await expect(date).toHaveValue("2026-11-09");
   await expect(body).toHaveValue("Hoy escribo en español.");
   await page.getByRole("button", { name: "Save entry", exact: true }).tap();
-  await expect(page.getByRole("status")).toHaveText("New entry savedNovember 9, 2026");
-  await expect(page.locator("main:visible li")).toContainText("Hoy escribo en español.");
+  await expect(page.getByRole("status")).toHaveText("Your feedback is ready.");
+  await page.getByRole("link", { name: "Back to journal", exact: true }).click();
+  await expect(
+    page.locator("main:visible li").filter({ hasText: "Hoy escribo en español." }),
+  ).toBeVisible();
 });
 
 test("changing levels updates capacity and preserves the first chosen focus areas", async ({

@@ -132,14 +132,9 @@ test("creates a journal and entry, persists fake-model feedback, then soft delet
   await page.getByRole("link", { name: "New entry", exact: true }).tap();
   await page.getByLabel("Your entry", { exact: true }).fill("I goes to school.");
   await page.getByRole("button", { name: "Save entry", exact: true }).tap();
-  const row = page.locator("main:visible li a").first();
-  await expect(row).toBeVisible();
-  const href = await row.getAttribute("href");
-  if (!href) throw new Error("Saved entry link missing");
+  await expect(page).toHaveURL(new RegExp(`/journals/${id}/entries/[a-f0-9-]+$`));
+  const href = new URL(page.url()).pathname;
   const entryId = href.split("/").at(-1)!;
-  await row.tap();
-  await expect(page.getByRole("status")).toHaveText(dictionaries.en.feedbackNoFeedback);
-  await page.getByRole("button", { name: "Get feedback", exact: true }).tap();
   await expect(page.getByRole("status")).toHaveText(dictionaries.en.feedbackPending);
   await expect(page.getByRole("status")).toHaveText(dictionaries.en.feedbackReady);
   await expect(page.getByText("I go to school.", { exact: true })).toBeVisible();
@@ -175,11 +170,13 @@ test("fourth feedback request displays the server's per-entry limit and creates 
 }) => {
   await page.goto(detail());
   for (let count = 0; count < 3; count++) {
-    await page.getByRole("button", { name: "Get feedback", exact: true }).tap();
+    await page
+      .getByRole("button", { name: count ? "Get feedback again" : "Get feedback", exact: true })
+      .tap();
     await expect(page.getByRole("status")).toHaveText(dictionaries.en.feedbackPending);
     await expect(page.getByRole("status")).toHaveText(dictionaries.en.feedbackReady);
   }
-  await page.getByRole("button", { name: "Get feedback", exact: true }).tap();
+  await page.getByRole("button", { name: "Get feedback again", exact: true }).tap();
   await expect(page.getByRole("status")).toContainText(dictionaries.en.entry_limit_reached);
   const sql = postgres(testDatabaseUrl());
   try {
@@ -310,7 +307,7 @@ test("permanent entry deletion warns with its date, traps focus, cancels and the
   await expect(page.getByRole("status")).toHaveText(dictionaries.en.feedbackReady);
   const trigger = page.getByRole("button", { name: dictionaries.en.entryActions, exact: true });
   await trigger.tap();
-  await page.getByRole("menuitem", { name: "Delete permanently", exact: true }).tap();
+  await page.getByRole("menuitem", { name: "Delete forever", exact: true }).tap();
   const dialog = page.getByRole("alertdialog");
   await expect(dialog).toContainText("November 1, 2026");
   await expect(dialog).toContainText("cannot be restored");
@@ -319,7 +316,7 @@ test("permanent entry deletion warns with its date, traps focus, cancels and the
   await expect(dialog).toHaveCount(0);
   await expect(trigger).toBeFocused();
   await trigger.tap();
-  await page.getByRole("menuitem", { name: "Delete permanently", exact: true }).tap();
+  await page.getByRole("menuitem", { name: "Delete forever", exact: true }).tap();
   for (let index = 0; index < 4; index++) {
     await page.keyboard.press("Tab");
     await expect
@@ -354,7 +351,7 @@ for (const mode of ["soft", "hard"]) {
       await page.getByRole("menuitem", { name: "Move to trash", exact: true }).tap();
     } else {
       await page.getByRole("button", { name: /actions$/i }).tap();
-      await page.getByRole("menuitem", { name: "Delete permanently", exact: true }).tap();
+      await page.getByRole("menuitem", { name: "Delete forever", exact: true }).tap();
       await expect(page.getByRole("alertdialog")).toContainText(
         dictionaries.en.deleteJournalWarning,
       );

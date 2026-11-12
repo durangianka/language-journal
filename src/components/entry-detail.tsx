@@ -1,5 +1,8 @@
 "use client";
 
+import { useState } from "react";
+import { EntryForm } from "@/components/entry-form";
+import { Button } from "@/components/ui/button";
 import { DeleteActions } from "@/components/delete-actions";
 import { EntryFeedback } from "@/components/entry-feedback";
 import { Badge } from "@/components/ui/badge";
@@ -20,6 +23,7 @@ export function EntryDetail({
   t: Dictionary;
 }) {
   const entry = initialEntry;
+  const [editing, setEditing] = useState(false);
   const date = formatDate(entry.entryDate, locale);
   return (
     <>
@@ -27,13 +31,41 @@ export function EntryDetail({
         <time dateTime={entry.entryDate}>{date}</time>
         <Badge variant="secondary">{t[languageLabelKeys[language]]}</Badge>
       </div>
-      <EntryFeedback entry={entry} language={language} locale={locale} t={t} />
+      {editing ? (
+        <EntryForm
+          key={entry.updatedAt}
+          journalId={entry.journalId}
+          initialEntry={entry}
+          locale={locale}
+          t={t}
+          onSaved={() => setEditing(false)}
+          onCancel={() => setEditing(false)}
+        />
+      ) : (
+        <>
+          <Button
+            variant="outline"
+            className="min-h-11 self-start"
+            onClick={() => setEditing(true)}
+          >
+            {t.editEntry}
+          </Button>
+          <EntryFeedback
+            key={entry.updatedAt}
+            entry={entry}
+            language={language}
+            locale={locale}
+            t={t}
+          />
+        </>
+      )}
       <DeleteActions
         id={entry.id}
         kind="entry"
         date={date}
         returnTo={`/journals/${entry.journalId}`}
         t={t}
+        onEdit={() => setEditing(true)}
       />
     </>
   );

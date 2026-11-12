@@ -6,6 +6,7 @@ import { SentenceCards } from "@/components/sentence-cards";
 import type { Dictionary } from "@/i18n/types";
 import { getJournal, listEntries } from "@/lib/journal";
 import { idSchema } from "@/lib/journal/schemas";
+import { getLocale } from "@/i18n/server";
 
 export async function NewEntryForm({
   params,
@@ -16,14 +17,18 @@ export async function NewEntryForm({
 }) {
   const { id } = await params;
   if (!idSchema.safeParse(id).success) notFound();
-  const [journal, entries] = await Promise.all([getJournal(id), listEntries(id)]);
+  const [journal, entries, locale] = await Promise.all([
+    getJournal(id),
+    listEntries(id),
+    getLocale(),
+  ]);
   if (!journal) notFound();
 
   return (
     <JournalEntryGate entries={entries} t={t}>
       <div className="writing-workspace flex min-w-0 flex-col gap-4">
         <SentenceCards language={journal.language} level={journal.level} t={t} />
-        <EntryForm journalId={id} t={t} />
+        <EntryForm journalId={id} t={t} locale={locale} />
       </div>
     </JournalEntryGate>
   );

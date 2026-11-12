@@ -3,18 +3,37 @@
 import { useActionState, useEffect, useRef, useState, useSyncExternalStore } from "react";
 import type { JevNote } from "@/lib/jev/contract";
 import { useRouter, useSearchParams } from "next/navigation";
-import { createEntryAction } from "@/app/journals/actions";
+import { createEntryAction, updateEntryAction } from "@/app/journals/actions";
+import { EntryDatePicker } from "@/components/entry-date-picker";
 import { FieldError } from "@/components/field-error";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import type { Dictionary } from "@/i18n/types";
+import type { Dictionary, Locale } from "@/i18n/types";
+import type { EntryDto } from "@/lib/feedback-contract";
 import type { ActionResult } from "@/lib/journal/action-input";
 import { today } from "@/lib/journal/dates";
+import { createEntrySchema } from "@/lib/journal/schemas";
+import { cn } from "cn";
 
 const subscribe = () => () => {};
 const serverDate = () => "";
 
-export function EntryForm({ journalId, t }: { journalId: string; t: Dictionary }) {
+export function EntryForm({
+  journalId,
+  t,
+  locale,
+  initialEntry,
+  onSaved,
+  onCancel,
+}: {
+  journalId: string;
+  t: Dictionary;
+  locale: Locale;
+  initialEntry?: EntryDto;
+  onSaved?: () => void;
+  onCancel?: () => void;
+}) {
+  const fieldId = (name: string) => (initialEntry ? `${initialEntry.id}-${name}` : name);
   const router = useRouter();
   const formRef = useRef<HTMLFormElement>(null);
   useEffect(() => {
@@ -34,7 +53,7 @@ export function EntryForm({ journalId, t }: { journalId: string; t: Dictionary }
     };
   }, []);
   const requestedDate = useSearchParams().get("date");
-  const [body, setBody] = useState("");
+  const [body, setBody] = useState(initialEntry?.body ?? "");
   const [judgement, setJudgement] = useState<JevNote | null>(null);
   const revision = useRef(0);
   const lastChecked = useRef("");
@@ -57,14 +76,30 @@ export function EntryForm({ journalId, t }: { journalId: string; t: Dictionary }
   }
   // The server cannot know the device timezone. Leave the date blank until hydration.
   const localToday = useSyncExternalStore(subscribe, today, serverDate);
-  const [selectedDate, setEntryDate] = useState<string | null>(() =>
-    requestedDate && /^\d{4}-\d{2}-\d{2}$/.test(requestedDate) ? requestedDate : null,
+  const [selectedDate, setEntryDate] = useState<string | null>(
+    () =>
+      initialEntry?.entryDate ??
+      (requestedDate && createEntrySchema.shape.entryDate.safeParse(requestedDate).success
+        ? requestedDate
+        : null),
   );
   const entryDate = selectedDate ?? localToday;
   const [state, action, pending] = useActionState<ActionResult | null, FormData>(
     async (_previous, form) => {
-      const result = await createEntryAction(form);
-      if (result.success) router.push(`/journals/${journalId}?saved=${result.id}`);
+      const result = await (initialEntry ? updateEntryAction(form) : createEntryAction(form));
+      if (result.success) {
+        if (initialEntry) {
+          router.refresh();
+          onSaved?.();
+        } else {
+          setBody("");
+          setEntryDate(null);
+          setJudgement(null);
+          lastChecked.current = "";
+          revision.current += 1;
+          router.push(`/journals/${journalId}/entries/${result.id}`);
+        }
+      }
       return result;
     },
     null,
@@ -74,30 +109,36 @@ export function EntryForm({ journalId, t }: { journalId: string; t: Dictionary }
   return (
     <form ref={formRef} action={action} className="writing-form flex min-h-0 flex-1 flex-col gap-2">
       <input type="hidden" name="journalId" value={journalId} />
+      {initialEntry && <input type="hidden" name="entryId" value={initialEntry.id} />}
       <div className="grid grid-cols-[auto_1fr] items-center gap-3">
-        <label htmlFor="entry-date" className="flex min-h-11 items-center font-semibold">
+        <label
+          id={`${fieldId("entry-date")}-label`}
+          htmlFor={fieldId("entry-date")}
+          className="flex min-h-11 items-center font-semibold"
+        >
           {t.entryDate}
         </label>
-        <input
-          id="entry-date"
-          type="date"
-          name="entryDate"
-          className="min-h-11 w-full min-w-0 rounded-lg border px-3 text-base focus-visible:outline-2"
+        <EntryDatePicker
+          id={fieldId("entry-date")}
+          errorId={fieldId("date-error")}
           value={entryDate}
-          onChange={(event) => setEntryDate(event.target.value)}
-          required
-          aria-invalid={Boolean(errors.entryDate)}
-          aria-describedby="date-error"
+          onChange={setEntryDate}
+          locale={locale}
+          invalid={Boolean(errors.entryDate)}
+          t={t}
         />
       </div>
-      <FieldError id="date-error" error={errors.entryDate} t={t} />
-      <label htmlFor="entry-body" className="flex min-h-11 items-center font-semibold">
+      <FieldError id={fieldId("date-error")} error={errors.entryDate} t={t} />
+      <label htmlFor={fieldId("entry-body")} className="flex min-h-11 items-center font-semibold">
         {t.yourEntry}
       </label>
       <Textarea
-        id="entry-body"
+        id={fieldId("entry-body")}
         name="body"
-        className="min-h-16 flex-1 resize-none overflow-y-auto text-base [field-sizing:fixed]"
+        className={cn(
+          "min-h-16 flex-1 resize-none overflow-y-auto text-base [field-sizing:fixed]",
+          initialEntry && "min-h-64",
+        )}
         value={body}
         onChange={(event) => {
           revision.current += 1;
@@ -106,10 +147,11 @@ export function EntryForm({ journalId, t }: { journalId: string; t: Dictionary }
         }}
         onBlur={() => void judgeOnBlur()}
         required
+        autoFocus={Boolean(initialEntry)}
         aria-invalid={Boolean(errors.body)}
-        aria-describedby="character-count body-error jev-note"
+        aria-describedby={`${fieldId("character-count")} ${fieldId("body-error")} ${fieldId("jev-note")}`}
       />
-      <div id="jev-note" aria-live="polite" className="text-sm text-muted-foreground">
+      <div id={fieldId("jev-note")} aria-live="polite" className="text-sm text-muted-foreground">
         {judgement
           ? judgement.issue === "none"
             ? t.jevNoIssues
@@ -120,15 +162,26 @@ export function EntryForm({ journalId, t }: { journalId: string; t: Dictionary }
         <p>
           {body.trim() ? body.trim().split(/\s+/u).length : 0} {t.words}
         </p>
-        <p id="character-count">
+        <p id={fieldId("character-count")}>
           {Array.from(body).length} / 2000 {t.characters}
         </p>
       </div>
-      <FieldError id="body-error" error={errors.body} t={t} />
-      <FieldError id="journal-error" error={errors.journalId} t={t} />
-      <FieldError id="form-error" error={errors.form} t={t} />
-      <div className="writing-save shrink-0 bg-background py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
-        <Button type="submit" className="min-h-11 w-full" disabled={pending || !entryDate}>
+      <FieldError id={fieldId("body-error")} error={errors.body} t={t} />
+      <FieldError id={fieldId("journal-error")} error={errors.journalId} t={t} />
+      <FieldError id={fieldId("form-error")} error={errors.form} t={t} />
+      <div className="writing-save flex shrink-0 gap-3 bg-background py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
+        {onCancel && (
+          <Button
+            type="button"
+            variant="outline"
+            className="min-h-11 min-w-11 shrink-0"
+            disabled={pending}
+            onClick={onCancel}
+          >
+            {t.cancel}
+          </Button>
+        )}
+        <Button type="submit" className="min-h-11 min-w-0 flex-1" disabled={pending || !entryDate}>
           {pending ? t.saving : t.saveEntry}
         </Button>
       </div>
