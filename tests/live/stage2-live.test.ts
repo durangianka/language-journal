@@ -10,6 +10,7 @@ import { judgeEntry } from "../../src/lib/jev/service";
 import { createEntry, createJournal, deleteEntry } from "../../src/lib/journal";
 import { summariseJournal } from "../../src/lib/insight/repository";
 import { summaryProvider } from "../../src/lib/insight/provider";
+import { locales } from "../../src/config/locales";
 
 afterAll(async () => {
   await client.end();
@@ -70,7 +71,7 @@ test.skipIf(process.env.RUN_STAGE2_LIVE !== "1")(
         "Model: gpt-6-luna. One call per test journal; three separate journals respect the daily per-journal limit.",
         "",
       );
-      for (const locale of ["en", "es", "it"] as const) {
+      for (const locale of locales) {
         const journal = await createJournal({ language: "en", level: "basic", focus: ["grammar"] });
         try {
           const texts = [

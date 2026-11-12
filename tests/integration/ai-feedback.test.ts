@@ -46,6 +46,7 @@ const fake = {
 };
 afterEach(async () => {
   for (const id of journalIds.splice(0)) await db.delete(journals).where(eq(journals.id, id));
+  await db.delete(modelCalls);
   fake.generate.mockClear();
 });
 afterAll(async () => {
@@ -166,7 +167,7 @@ test("old calls do not count toward the current London day, including DST bounda
   expect(Number(days[0].autumn)).toBe(25);
 });
 
-test("soft deletion hides entry, feedback and counts; hard deletion cascades", async () => {
+test("soft deletion hides entry, feedback and counts; hard deletion retains metering", async () => {
   const { journal, entry } = await fixture();
   const job = await beginFeedback(entry.id, "en");
   await runFeedback(job, feedbackStore, fake);
@@ -180,9 +181,12 @@ test("soft deletion hides entry, feedback and counts; hard deletion cascades", a
   expect(await getJournalMistakeCounts(journal.id)).toEqual([]);
   expect(await db.select().from(feedback).where(eq(feedback.entryId, entry.id))).toEqual([]);
   expect(await db.select().from(modelCalls).where(eq(modelCalls.entryId, entry.id))).toEqual([]);
+  expect(await db.select().from(modelCalls).where(eq(modelCalls.id, job.callId))).toMatchObject([
+    { feedbackId: null, entryId: null, outcome: "ready" },
+  ]);
 });
 
-test("soft deleted journals hide child data and counts; hard delete cascades all tables", async () => {
+test("soft deleted journals hide child data and counts; hard delete retains metering", async () => {
   const { journal, entry } = await fixture();
   const job = await beginFeedback(entry.id, "en");
   await runFeedback(job, feedbackStore, fake);

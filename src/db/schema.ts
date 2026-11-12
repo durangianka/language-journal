@@ -111,9 +111,9 @@ export const modelCalls = pgTable(
   "model_calls",
   {
     id: uuid("id").defaultRandom().primaryKey(),
-    feedbackId: uuid("feedback_id").references(() => feedback.id, { onDelete: "cascade" }),
-    entryId: uuid("entry_id").references(() => entries.id, { onDelete: "cascade" }),
-    journalId: uuid("journal_id").references(() => journals.id, { onDelete: "cascade" }),
+    feedbackId: uuid("feedback_id").references(() => feedback.id, { onDelete: "set null" }),
+    entryId: uuid("entry_id").references(() => entries.id, { onDelete: "set null" }),
+    journalId: uuid("journal_id").references(() => journals.id, { onDelete: "set null" }),
     kind: text("kind", { enum: ["analysis", "retry", "repair", "insight"] }).notNull(),
     outcome: text("outcome", { enum: ["reserved", "running", "ready", "failed"] }).notNull(),
     reasonCode: text("reason_code", { enum: FEEDBACK_REASONS }),
@@ -130,7 +130,7 @@ export const modelCalls = pgTable(
     check("model_calls_kind_valid", sql`${t.kind} in ('analysis', 'retry', 'repair', 'insight')`),
     check(
       "model_calls_source_valid",
-      sql`(${t.kind} = 'insight' and ${t.journalId} is not null) or (${t.kind} <> 'insight' and ${t.feedbackId} is not null and ${t.entryId} is not null)`,
+      sql`(${t.kind} = 'insight' and ${t.feedbackId} is null and ${t.entryId} is null) or (${t.kind} <> 'insight' and ${t.journalId} is null)`,
     ),
     check(
       "model_calls_outcome_valid",

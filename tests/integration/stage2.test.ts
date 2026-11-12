@@ -1,9 +1,18 @@
 import { afterAll, afterEach, expect, test, vi } from "vitest";
-import { eq, sql } from "drizzle-orm";
+import { count, eq, sql } from "drizzle-orm";
 vi.mock("server-only", () => ({}));
 import { client, db } from "../../src/db/client";
-import { entries, jevCalls, journalInsights, journals, modelCalls } from "../../src/db/schema";
-import { createEntry, createJournal, deleteEntry } from "../../src/lib/journal";
+import {
+  entries,
+  feedback,
+  jevCalls,
+  journalInsights,
+  journals,
+  modelCalls,
+} from "../../src/db/schema";
+import { createEntry, createJournal, deleteEntry, deleteJournal } from "../../src/lib/journal";
+import { beginFeedback, feedbackStore } from "../../src/lib/ai/repository";
+import { runFeedback } from "../../src/lib/ai/service";
 import { summariseJournal } from "../../src/lib/insight/repository";
 import { jevStore } from "../../src/lib/jev/repository";
 
@@ -16,6 +25,7 @@ async function fixture() {
 }
 afterEach(async () => {
   for (const id of ids.splice(0)) await db.delete(journals).where(eq(journals.id, id));
+  await db.delete(modelCalls);
   await db.delete(jevCalls);
 });
 afterAll(async () => {
@@ -52,15 +62,17 @@ test("summary excludes trashed entries, uses current locale, persists one call a
 });
 test("summary shares the 50 model-call cap with feedback", async () => {
   const { journal, entry } = await fixture();
-  await db
-    .insert(modelCalls)
-    .values(
-      Array.from({ length: 50 }, () => ({
-        journalId: journal.id,
-        kind: "insight" as const,
-        outcome: "ready" as const,
-      })),
-    );
+  await db.insert(modelCalls).values(
+    Array.from(
+      { length: 50 },
+      () =>
+        ({
+          journalId: journal.id,
+          kind: "insight",
+          outcome: "ready",
+        }) satisfies typeof modelCalls.$inferInsert,
+    ),
+  );
   const provider = vi.fn();
   expect(await summariseJournal(journal.id, "en", provider)).toEqual({
     summary: null,
@@ -69,6 +81,71 @@ test("summary shares the 50 model-call cap with feedback", async () => {
   expect(provider).not.toHaveBeenCalled();
   expect(entry.id).toBeTruthy();
 });
+test.each(["journal", "entry", "feedback"])(
+  "hard deleting a %s preserves the exhausted daily cap for summaries and feedback",
+  async (source) => {
+    const { journal, entry } = await fixture();
+    const target = await fixture();
+    await db.insert(modelCalls).values(
+      Array.from(
+        { length: 48 },
+        () =>
+          ({
+            journalId: journal.id,
+            kind: "insight",
+            outcome: "ready",
+          }) satisfies typeof modelCalls.$inferInsert,
+      ),
+    );
+    const summaryProvider = vi.fn(async () => ({
+      text: "Keep practising your past tense.",
+      inputTokens: 10,
+      outputTokens: 5,
+    }));
+    expect(await summariseJournal(journal.id, "en", summaryProvider)).toEqual({
+      summary: "Keep practising your past tense.",
+    });
+    const job = await beginFeedback(entry.id, "en");
+    const feedbackProvider = {
+      generate: vi.fn(async () => ({
+        text: JSON.stringify({ corrected_text: entry.body, corrections: [] }),
+        inputTokens: 20,
+        outputTokens: 10,
+      })),
+    };
+    await runFeedback(job, feedbackStore, feedbackProvider);
+    expect(summaryProvider).toHaveBeenCalledTimes(1);
+    expect(feedbackProvider.generate).toHaveBeenCalledTimes(1);
+    const before = await db.select().from(modelCalls).orderBy(modelCalls.id);
+    expect(before).toHaveLength(50);
+    expect(before.find((call) => call.id === job.callId)?.outcome).toBe("ready");
+
+    if (source === "journal") await deleteJournal(journal.id, "hard");
+    else if (source === "entry") await deleteEntry(entry.id, "hard");
+    else await db.delete(feedback).where(eq(feedback.id, job.id));
+
+    const after = await db.select().from(modelCalls).orderBy(modelCalls.id);
+    expect(after).toEqual(
+      before.map((call) => ({
+        ...call,
+        journalId: source === "journal" ? null : call.journalId,
+        entryId: source === "journal" || source === "entry" ? null : call.entryId,
+        feedbackId: null,
+      })),
+    );
+    expect(await summariseJournal(target.journal.id, "en", summaryProvider)).toEqual({
+      summary: null,
+      reason: "daily",
+    });
+    await expect(beginFeedback(target.entry.id, "en")).rejects.toMatchObject({
+      reason: "daily_cap_reached",
+    });
+    expect(summaryProvider).toHaveBeenCalledTimes(1);
+    expect(feedbackProvider.generate).toHaveBeenCalledTimes(1);
+    expect(await db.select({ total: count() }).from(modelCalls)).toEqual([{ total: 50 }]);
+  },
+);
+
 test("failed summary is logged once and cannot retry that journal today", async () => {
   const { journal } = await fixture();
   const provider = vi.fn(async () => {
