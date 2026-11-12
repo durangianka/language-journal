@@ -126,6 +126,8 @@ export type Dictionary = {
   journalNotFound: string;
   journals: string;
   emptyJournals: string;
+  lastEntry: string;
+  noEntriesYet: string;
   chooseLanguage: string;
   chooseLevel: string;
   new: string;

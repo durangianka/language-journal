@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
+import { Pencil, Settings, Trash2, Trash } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { restoreDeletedAction } from "@/app/journals/feedback-actions";
@@ -102,12 +103,14 @@ export function DeleteActions({
             />
           }
         >
+          <Settings aria-hidden="true" />
           {kind === "entry" ? t.entryActions : t.journalActions}
         </DropdownMenuTrigger>
         <DropdownMenuContent>
           <DropdownMenuGroup>
             {onEdit && (
               <DropdownMenuItem className="min-h-11" disabled={busy} onClick={onEdit}>
+                <Pencil aria-hidden="true" />
                 {t.editEntry}
               </DropdownMenuItem>
             )}
@@ -116,6 +119,7 @@ export function DeleteActions({
               disabled={busy}
               onClick={() => void remove("soft")}
             >
+              <Trash2 aria-hidden="true" />
               {t.moveToTrash}
             </DropdownMenuItem>
             <DropdownMenuItem
@@ -124,6 +128,7 @@ export function DeleteActions({
               disabled={busy}
               onClick={() => setOpen(true)}
             >
+              <Trash aria-hidden="true" />
               {t.deletePermanently}
             </DropdownMenuItem>
           </DropdownMenuGroup>
@@ -159,6 +164,7 @@ export function DeleteActions({
               disabled={busy}
               onClick={() => void remove("hard")}
             >
+              <Trash aria-hidden="true" />
               {t.confirmDeletePermanently}
             </AlertDialogAction>
           </AlertDialogFooter>

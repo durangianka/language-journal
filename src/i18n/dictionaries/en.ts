@@ -124,8 +124,9 @@ export const en = {
   homeDescription: "A space for your language learning journey.",
   journals: "Journals",
   journalNotFound: "Journal unavailable",
-  emptyJournals:
-    "Start a journal to practise a language. Choose New journal, then pick your language and level.",
+  emptyJournals: "Create your first language journal.",
+  lastEntry: "Last entry",
+  noEntriesYet: "No entries yet",
   chooseLanguage: "Choose a language",
   chooseLevel: "Choose your level",
   new: "New · A1",

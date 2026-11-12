@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { Plus, PenLine } from "lucide-react";
 import type { ReactNode } from "react";
 import { DeleteActions } from "@/components/delete-actions";
 import { DeletedNotice } from "@/components/deleted-notice";
@@ -15,7 +16,10 @@ function LimitMessage({ t }: { t: Dictionary }) {
   return (
     <div className="flex flex-col gap-4 rounded-xl border p-4">
       <p>{t.journalEntryLimitReached}</p>
-      <JournalLink href="/journals/new">{t.newJournal}</JournalLink>
+      <JournalLink href="/journals/new">
+        <Plus aria-hidden="true" />
+        {t.newJournal}
+      </JournalLink>
     </div>
   );
 }
@@ -50,7 +54,10 @@ export function JournalReview({
       {entries.length >= LIMITS.entriesPerJournal ? (
         <LimitMessage t={t} />
       ) : (
-        <JournalLink href={`/journals/${id}/entries/new`}>{t.newEntry}</JournalLink>
+        <JournalLink href={`/journals/${id}/entries/new`}>
+          <PenLine aria-hidden="true" />
+          {t.newEntry}
+        </JournalLink>
       )}
       <JournalCalendar
         dates={entries.map((entry) => entry.entryDate)}

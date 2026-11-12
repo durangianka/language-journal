@@ -21,8 +21,12 @@ export function Header({ locale, dictionary: t }: IHeaderProps) {
 
   return (
     <header className="border-b">
-      <div className="mx-auto flex max-w-5xl items-center justify-between gap-3 px-4 py-4 sm:px-6">
-        <Link href="/" aria-label={t.home} className="inline-flex min-h-11 min-w-11 items-center rounded-sm text-sm font-semibold focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ring sm:text-base">
+      <div className="mx-auto flex max-w-5xl flex-wrap items-center justify-between gap-3 px-4 py-4 sm:px-6">
+        <Link
+          href="/"
+          aria-label={t.home}
+          className="inline-flex min-h-11 min-w-11 items-center rounded-sm text-sm font-semibold focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ring sm:text-base"
+        >
           {t.appName}
         </Link>
         <nav aria-label={t.languages} className="flex shrink-0 gap-1">
@@ -30,8 +34,20 @@ export function Header({ locale, dictionary: t }: IHeaderProps) {
             const { name, Flag } = languages[value];
             return (
               <form action={setLocale} key={value}>
-                <Button type="submit" name="locale" value={value} aria-label={name} title={name} aria-pressed={locale === value} variant={locale === value ? "outline" : "ghost"} size="icon-lg" className="size-11">
-                  <Flag title={name} />
+                <Button
+                  type="submit"
+                  name="locale"
+                  value={value}
+                  aria-label={name}
+                  title={name}
+                  aria-pressed={locale === value}
+                  variant={locale === value ? "outline" : "ghost"}
+                  className="min-h-11 gap-2"
+                >
+                  <span aria-hidden="true">
+                    <Flag title={name} />
+                  </span>
+                  <span>{name}</span>
                 </Button>
               </form>
             );
