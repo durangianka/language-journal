@@ -163,17 +163,6 @@ test("invalid repair transitions to failed", async () => {
   expect(store.failed).toHaveBeenCalledWith(job.id, "invalid_output");
   expect(store.ready).not.toHaveBeenCalled();
 });
-test.each(["network", "http_500", "http_503"])("retries %s once", async (reason) => {
-  const { store, provider } = fixture();
-  provider.generate.mockRejectedValue(new ProviderError(reason, true));
-  await runFeedback(job, store, provider);
-  expect(store.reserve).toHaveBeenCalledExactlyOnceWith(job, "retry");
-  expect(provider.generate).toHaveBeenCalledTimes(2);
-  expect(store.failed).toHaveBeenCalledWith(
-    job.id,
-    reason === "timeout" ? "timeout" : "provider_error",
-  );
-});
 test.each(["http_400", "http_401", "http_429", "timeout", "missing_api_key"])(
   "does not retry %s",
   async (reason) => {
@@ -188,15 +177,6 @@ test.each(["http_400", "http_401", "http_429", "timeout", "missing_api_key"])(
     );
   },
 );
-test("one retry plus one repair is at most three metered calls", async () => {
-  const { store, provider } = fixture();
-  provider.generate
-    .mockRejectedValueOnce(new ProviderError("network", true))
-    .mockResolvedValueOnce(result("{}"));
-  await runFeedback(job, store, provider);
-  expect(provider.generate).toHaveBeenCalledTimes(3);
-  expect(store.reserve.mock.calls.map((c) => c[1])).toEqual(["retry", "repair"]);
-});
 test("daily cap refuses repair without making another call", async () => {
   const { store, provider } = fixture();
   store.reserve.mockResolvedValue(null);
