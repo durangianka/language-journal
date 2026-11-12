@@ -1,10 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import type { Dictionary, Locale } from "@/i18n/types";
-import { requestFeedback, seedEntries } from "@/lib/feedback-client";
+import { getEntry, requestFeedback } from "@/lib/feedback-client";
+import { feedbackResultState, feedbackScreenState } from "@/lib/feedback-state";
 import { LIMITS, type EntryDto, type FeedbackCategory } from "@/lib/feedback-contract";
 
 const categoryColors: Record<FeedbackCategory, string> = {
@@ -25,25 +27,60 @@ export function EntryFeedback({
   locale: Locale;
   t: Dictionary;
 }) {
+  const router = useRouter();
   const [pending, setPending] = useState(false);
-  const [requestError, setRequestError] = useState<string | null>(null);
-  const feedback = entry.latestFeedback;
-  const status = pending ? "pending" : requestError ? "failed" : feedback?.status;
-  const reason = requestError ?? (feedback?.reason ? t[feedback.reason] : t.feedbackUnknown);
+  const [state, setState] = useState(() => feedbackScreenState(entry.latestFeedback));
+  const {
+    feedback,
+    status,
+    reason: reasonCode,
+  } = pending ? feedbackScreenState(state.feedback, true) : state;
+  const reason =
+    reasonCode && reasonCode !== "validation" && reasonCode !== "unknown"
+      ? t[reasonCode]
+      : t.feedbackUnknown;
+
+  useEffect(() => {
+    if (status !== "pending" || pending) return;
+    let cancelled = false;
+    let timer: ReturnType<typeof setTimeout>;
+    async function poll() {
+      try {
+        const current = await getEntry(entry.id);
+        if (cancelled) return;
+        if (!current) {
+          router.refresh();
+          return;
+        }
+        setState(feedbackScreenState(current.latestFeedback));
+        if (current.latestFeedback?.status === "pending") timer = setTimeout(poll, 1000);
+        else router.refresh();
+      } catch {
+        if (!cancelled)
+          setState((previous) => feedbackScreenState(previous.feedback, false, "unknown"));
+      }
+    }
+    timer = setTimeout(poll, 1000);
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [entry.id, pending, router, status]);
+
   async function request() {
     setPending(true);
-    setRequestError(null);
-    seedEntries([entry], language);
     try {
-      const result = await requestFeedback(entry.id, locale);
-      if (!result.success)
-        setRequestError(
-          result.reason === "validation" || result.reason === "unknown"
-            ? t.feedbackUnknown
-            : t[result.reason],
-        );
+      // A failed poll retries the read without consuming another feedback allowance.
+      if (state.feedback?.status === "pending") {
+        const current = await getEntry(entry.id);
+        if (!current) router.refresh();
+        else setState(feedbackScreenState(current.latestFeedback));
+      } else {
+        const result = await requestFeedback(entry.id, locale);
+        setState((previous) => feedbackResultState(result, previous.feedback));
+      }
     } catch {
-      setRequestError(t.feedbackUnknown);
+      setState((previous) => feedbackScreenState(previous.feedback, false, "unknown"));
     } finally {
       setPending(false);
     }
@@ -53,7 +90,6 @@ export function EntryFeedback({
       <h2 id="feedback-heading" className="text-xl font-semibold">
         {t.feedbackHeading}
       </h2>
-      <p className="text-sm text-muted-foreground">{t.feedbackDemoNotice}</p>
       <div role="status" aria-live="polite" aria-atomic="true">
         {status === "pending"
           ? t.feedbackPending

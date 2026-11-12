@@ -8,13 +8,13 @@ import {
   type FeedbackDto,
   type Locale,
 } from "../../src/lib/feedback-contract";
-import { STUB_STORAGE_KEY } from "../../src/lib/feedback-client";
 import { dictionaries } from "../../src/i18n/dictionaries";
 import { testDatabaseUrl } from "../support/test-database-url";
 
 test.use({ viewport: { width: 375, height: 812 }, hasTouch: true, isMobile: true });
 let journalId = "";
 let entries: EntryDto[] = [];
+const createdJournals: string[] = [];
 test.beforeEach(async () => {
   journalId = randomUUID();
   entries = [];
@@ -43,6 +43,7 @@ test.afterEach(async () => {
   const sql = postgres(testDatabaseUrl());
   try {
     await sql`delete from journals where id = ${journalId}`;
+    for (const id of createdJournals.splice(0)) await sql`delete from journals where id = ${id}`;
   } finally {
     await sql.end();
   }
@@ -64,20 +65,17 @@ function feedback(status: FeedbackDto["status"] = "ready"): FeedbackDto {
   };
 }
 async function store(page: Page, values: FeedbackDto[]) {
-  await page.evaluate(
-    ({ key, values }) => {
-      localStorage.setItem(
-        key,
-        JSON.stringify({
-          feedback: Object.fromEntries(values.map((value) => [value.entryId, value])),
-          deletedEntries: {},
-          deletedJournals: {},
-        }),
-      );
-      window.dispatchEvent(new Event("storage"));
-    },
-    { key: STUB_STORAGE_KEY, values },
-  );
+  const sql = postgres(testDatabaseUrl());
+  try {
+    for (const value of values) {
+      await sql`delete from feedback where entry_id = ${value.entryId}`;
+      await sql`insert into feedback (id, entry_id, analysed_text, locale, status, reason_code, corrected_text, corrections, model, prompt_version)
+        values (${value.id}, ${value.entryId}, 'I goes to school.', ${value.locale}, ${value.status}, ${value.reason}, ${value.correctedText}, ${sql.json(value.corrections)}, 'fake', 'test')`;
+    }
+  } finally {
+    await sql.end();
+  }
+  await page.reload();
 }
 async function mobileChecks(page: Page) {
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
@@ -93,7 +91,7 @@ async function mobileChecks(page: Page) {
   expect(await page.locator("body").innerText()).not.toContain("\u2014");
 }
 
-test("old entry opens, requests sample feedback, announces pending and retains latest feedback after reload", async ({
+test("old entry opens, requests fake-model feedback, announces pending and retains latest feedback after reload", async ({
   page,
 }) => {
   await page.goto(detail());
@@ -113,8 +111,78 @@ test("old entry opens, requests sample feedback, announces pending and retains l
   await expect(page.locator("time").last()).toHaveAttribute("datetime", /T/);
   await page.getByRole("link", { name: "Back to journal", exact: true }).tap();
   await expect(page.locator(`a[href="${detail()}"]`)).toContainText("Feedback ready");
-  await page.goto("/journals");
+  await page.getByRole("link", { name: "Journals", exact: true }).tap();
   await expect(page.locator(`a[href="${detail()}"]`)).toContainText("Feedback ready");
+});
+
+test("creates a journal and entry, persists fake-model feedback, then soft deletes in Postgres", async ({
+  page,
+}) => {
+  await page.goto("/journals/new");
+  await page.getByRole("radio", { name: "English", exact: true }).check();
+  await page.getByRole("radio", { name: "Basic · A2", exact: true }).check();
+  await page.getByRole("button", { name: "Create journal", exact: true }).tap();
+  await expect(page).toHaveURL(/\/journals\/[a-f0-9-]+$/);
+  const id = new URL(page.url()).pathname.split("/")[2];
+  createdJournals.push(id);
+  await page.getByRole("link", { name: "New entry", exact: true }).tap();
+  await page.getByLabel("Your entry", { exact: true }).fill("I goes to school.");
+  await page.getByRole("button", { name: "Save entry", exact: true }).tap();
+  const row = page.locator("main:visible li a").first();
+  await expect(row).toBeVisible();
+  const href = await row.getAttribute("href");
+  if (!href) throw new Error("Saved entry link missing");
+  const entryId = href.split("/").at(-1)!;
+  await row.tap();
+  await expect(page.getByRole("status")).toHaveText(dictionaries.en.feedbackNoFeedback);
+  await page.getByRole("button", { name: "Get feedback", exact: true }).tap();
+  await expect(page.getByRole("status")).toHaveText(dictionaries.en.feedbackPending);
+  await expect(page.getByRole("status")).toHaveText(dictionaries.en.feedbackReady);
+  await expect(page.getByText("I go to school.", { exact: true })).toBeVisible();
+  await page.reload();
+  await expect(page.getByRole("status")).toHaveText(dictionaries.en.feedbackReady);
+  await page.getByRole("button", { name: "Move to trash", exact: true }).tap();
+  await expect(page.getByRole("status")).toHaveText(dictionaries.en.entryMovedToTrash);
+  await expect(page.locator(`a[href="${href}"]`)).toHaveCount(0);
+  const sql = postgres(testDatabaseUrl());
+  try {
+    const rows = await sql`select body, deleted_at from entries where id = ${entryId}`;
+    expect(rows).toHaveLength(1);
+    expect(rows[0].body).toBe("I goes to school.");
+    expect(rows[0].deleted_at).not.toBeNull();
+    const history =
+      await sql`select status, corrected_text from feedback where entry_id = ${entryId}`;
+    expect(history).toHaveLength(1);
+    expect(history[0]).toMatchObject({ status: "ready", corrected_text: "I go to school." });
+  } finally {
+    await sql.end();
+  }
+  await page.reload();
+  await expect(page.locator(`a[href="${href}"]`)).toHaveCount(0);
+  await page.goto(href);
+  await expect(
+    page.getByRole("heading", { name: dictionaries.en.journalNotFound, exact: true }),
+  ).toBeVisible();
+});
+
+test("fourth feedback request displays the server's per-entry limit and creates no extra job", async ({
+  page,
+}) => {
+  await page.goto(detail());
+  for (let count = 0; count < 3; count++) {
+    await page.getByRole("button", { name: "Get feedback", exact: true }).tap();
+    await expect(page.getByRole("status")).toHaveText(dictionaries.en.feedbackPending);
+    await expect(page.getByRole("status")).toHaveText(dictionaries.en.feedbackReady);
+  }
+  await page.getByRole("button", { name: "Get feedback", exact: true }).tap();
+  await expect(page.getByRole("status")).toContainText(dictionaries.en.entry_limit_reached);
+  const sql = postgres(testDatabaseUrl());
+  try {
+    const rows = await sql`select id from feedback where entry_id = ${entries[0].id}`;
+    expect(rows).toHaveLength(3);
+  } finally {
+    await sql.end();
+  }
 });
 
 test("review rows show every status and ready feedback displays no more than three labelled correction cards", async ({
@@ -161,7 +229,7 @@ test("review rows show every status and ready feedback displays no more than thr
 });
 
 for (const locale of ["en", "es", "it"]) {
-  test(`${locale} failures show every learner-safe reason and retry sample feedback`, async ({
+  test(`${locale} failures show every learner-safe reason and retry fake-model feedback`, async ({
     page,
     context,
   }) => {
@@ -191,12 +259,12 @@ for (const locale of ["en", "es", "it"]) {
   });
 }
 
-test("ten active entries block both creation links and direct creation routes; moving to trash restores capacity", async ({
+test("ten-entry cap blocks creation and the server preserves the cap after soft deletion", async ({
   page,
 }) => {
   await page.goto(`/journals/${journalId}`);
   await expect(page.getByText(dictionaries.en.journalEntryLimitReached)).toBeVisible();
-  await expect(page.locator("main li")).toHaveCount(10);
+  await expect(page.locator("main:visible li")).toHaveCount(10);
   await expect(page.getByRole("link", { name: "New entry", exact: true })).toHaveCount(0);
   await expect(page.getByRole("link", { name: "New journal", exact: true })).toHaveAttribute(
     "href",
@@ -209,18 +277,26 @@ test("ten active entries block both creation links and direct creation routes; m
   await page.getByRole("button", { name: "Move to trash", exact: true }).tap();
   await expect(page).toHaveURL(new RegExp(`/journals/${journalId}\\?deleted=entry-soft$`));
   await expect(page.getByRole("status")).toHaveText(dictionaries.en.entryMovedToTrash);
-  await expect(page.locator("main li")).toHaveCount(9);
+  await expect(page.locator("main:visible li")).toHaveCount(9);
   await expect(page.getByRole("link", { name: "New entry", exact: true })).toBeVisible();
   await page.reload();
-  await expect(page.locator("main li")).toHaveCount(9);
+  await expect(page.locator("main:visible li")).toHaveCount(9);
+  await page.goto(`/journals/${journalId}/entries/new`);
+  await page.getByLabel("Your entry", { exact: true }).fill("Another entry.");
+  await page.getByRole("button", { name: "Save entry", exact: true }).tap();
+  await expect(page.locator("#form-error")).toHaveText(dictionaries.en.journalFull);
   await page.goto(detail());
-  await expect(page.getByText(dictionaries.en.entryUnavailable, { exact: true })).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: dictionaries.en.journalNotFound, exact: true }),
+  ).toBeVisible();
 });
 
 test("permanent entry deletion warns with its date, traps focus, cancels and then removes the entry", async ({
   page,
 }) => {
   await page.goto(detail());
+  await page.getByRole("button", { name: "Get feedback", exact: true }).tap();
+  await expect(page.getByRole("status")).toHaveText(dictionaries.en.feedbackReady);
   const trigger = page.getByRole("button", { name: "Delete permanently", exact: true });
   await trigger.tap();
   const dialog = page.getByRole("alertdialog");
@@ -241,9 +317,18 @@ test("permanent entry deletion warns with its date, traps focus, cancels and the
     .getByRole("button", { name: dictionaries.en.confirmDeletePermanently, exact: true })
     .tap();
   await expect(page.getByRole("status")).toHaveText(dictionaries.en.entryDeletedPermanently);
-  await expect(page.locator("main li")).toHaveCount(9);
+  await expect(page.locator("main:visible li")).toHaveCount(9);
+  const sql = postgres(testDatabaseUrl());
+  try {
+    expect(await sql`select id from entries where id = ${entries[0].id}`).toHaveLength(0);
+    expect(await sql`select id from feedback where entry_id = ${entries[0].id}`).toHaveLength(0);
+  } finally {
+    await sql.end();
+  }
   await page.goto(detail());
-  await expect(page.getByText(dictionaries.en.entryUnavailable, { exact: true })).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: dictionaries.en.journalNotFound, exact: true }),
+  ).toBeVisible();
 });
 
 for (const mode of ["soft", "hard"]) {
@@ -265,7 +350,9 @@ for (const mode of ["soft", "hard"]) {
     await expect(page).toHaveURL(new RegExp(`/journals\\?deleted=journal-${mode}$`));
     await expect(page.locator(`a[href="/journals/${journalId}"]`)).toHaveCount(0);
     await page.goto(detail());
-    await expect(page.getByText(dictionaries.en.entryUnavailable, { exact: true })).toBeVisible();
+    await expect(
+      page.getByRole("heading", { name: dictionaries.en.journalNotFound, exact: true }),
+    ).toBeVisible();
   });
 }
 

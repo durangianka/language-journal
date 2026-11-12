@@ -46,6 +46,7 @@ export function DeleteActions({
       }
       setOpen(false);
       router.push(`${returnTo}?deleted=${kind}-${mode}`);
+      router.refresh();
     } catch {
       setError(true);
       setBusy(false);
@@ -57,7 +58,6 @@ export function DeleteActions({
       className="mt-6 flex flex-col gap-3 border-t pt-6"
     >
       <h2 className="font-semibold">{kind === "entry" ? t.entryActions : t.journalActions}</h2>
-      <p className="text-sm text-muted-foreground">{t.feedbackDemoNotice}</p>
       <Button
         variant="secondary"
         className="min-h-11 w-full"

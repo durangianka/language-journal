@@ -6,6 +6,9 @@ import { getDictionary, getLocale } from "@/i18n/server";
 import { getEntry, getJournal } from "@/lib/journal";
 import { idSchema } from "@/lib/journal/schemas";
 
+// Feedback runs here after the response: allow analysis, retry and repair timeouts.
+export const maxDuration = 90;
+
 export default async function EntryPage({
   params,
 }: {
@@ -40,12 +43,7 @@ async function EntryContent({
   if (!entry || !journal || entry.journalId !== id) notFound();
   return (
     <JournalLayout title={t.yourEntry} back={`/journals/${id}`} backLabel={t.backToJournal}>
-      <EntryDetail
-        initialEntry={{ ...entry, latestFeedback: null }}
-        language={journal.language}
-        locale={locale}
-        t={t}
-      />
+      <EntryDetail initialEntry={entry} language={journal.language} locale={locale} t={t} />
     </JournalLayout>
   );
 }

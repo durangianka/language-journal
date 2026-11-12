@@ -56,13 +56,13 @@ export function EntryForm({ journalId, t }: { journalId: string; t: Dictionary }
         name="body"
         className="min-h-64 text-base"
         value={body}
-        onChange={(event) => setBody(Array.from(event.target.value).slice(0, 5000).join(""))}
+        onChange={(event) => setBody(Array.from(event.target.value).slice(0, 2000).join(""))}
         required
         aria-invalid={Boolean(errors.body)}
         aria-describedby="character-count body-error"
       />
       <p id="character-count" className="text-right text-sm text-muted-foreground">
-        {Array.from(body).length} / 5000 {t.characters}
+        {Array.from(body).length} / 2000 {t.characters}
       </p>
       <FieldError id="body-error" error={errors.body} t={t} />
       <FieldError id="journal-error" error={errors.journalId} t={t} />

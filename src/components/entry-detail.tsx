@@ -1,12 +1,9 @@
 "use client";
 
-import { JournalLink } from "@/components/journal-layout";
 import { DeleteActions } from "@/components/delete-actions";
 import { EntryFeedback } from "@/components/entry-feedback";
-import { useFeedbackStub } from "@/components/use-feedback-stub";
 import { Card, CardHeader, CardContent } from "@/components/ui/card";
 import type { Dictionary, Locale } from "@/i18n/types";
-import { visibleEntries } from "@/lib/feedback-client";
 import type { EntryDto } from "@/lib/feedback-contract";
 import { formatDate } from "@/lib/journal/dates";
 
@@ -21,15 +18,7 @@ export function EntryDetail({
   locale: Locale;
   t: Dictionary;
 }) {
-  const state = useFeedbackStub();
-  const entry = visibleEntries([initialEntry], state)[0];
-  if (!entry)
-    return (
-      <>
-        <p>{t.entryUnavailable}</p>
-        <JournalLink href={`/journals/${initialEntry.journalId}`}>{t.backToJournal}</JournalLink>
-      </>
-    );
+  const entry = initialEntry;
   const date = formatDate(entry.entryDate, locale);
   return (
     <>

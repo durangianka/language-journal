@@ -3,10 +3,8 @@
 import Link from "next/link";
 import { DeletedNotice } from "@/components/deleted-notice";
 import { FeedbackStatus } from "@/components/feedback-status";
-import { useFeedbackStub } from "@/components/use-feedback-stub";
 import { languageLabelKeys } from "@/config/domain";
 import type { Dictionary, Locale } from "@/i18n/types";
-import { visibleEntries } from "@/lib/feedback-client";
 import type { EntryDto } from "@/lib/feedback-contract";
 import { formatDate } from "@/lib/journal/dates";
 import type { Journal } from "@/lib/journal/types";
@@ -22,17 +20,14 @@ export function JournalsOverview({
   t: Dictionary;
   locale: Locale;
 }) {
-  const state = useFeedbackStub();
-  const active = journals.filter((journal) => !state.deletedJournals[journal.id]);
-  const visible = visibleEntries(entries, state);
   return (
     <>
       <DeletedNotice t={t} />
-      {active.length === 0 ? (
+      {journals.length === 0 ? (
         <p className="rounded-xl border p-5 text-muted-foreground">{t.emptyJournals}</p>
       ) : (
         <ul className="flex flex-col gap-3">
-          {active.map((journal) => (
+          {journals.map((journal) => (
             <li key={journal.id} className="rounded-xl border">
               <Link
                 href={`/journals/${journal.id}`}
@@ -44,7 +39,7 @@ export function JournalsOverview({
                   {formatDate(journal.createdAt, locale)}
                 </time>
               </Link>
-              {visible
+              {entries
                 .filter((entry) => entry.journalId === journal.id)
                 .map((entry) => (
                   <Link
