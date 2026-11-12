@@ -72,7 +72,10 @@ async function queryEntry(
     answers = ("text_kind" in questions ? feedbackJevAnswersSchema : jevAnswersSchema).parse(raw);
     return answers;
   } catch (error) {
-    console.error("Jev check failed", error);
+    console.error("Jev check failed", {
+      error,
+      stack: error instanceof Error ? error.stack : undefined,
+    });
     return null;
   } finally {
     clearTimeout(timer);

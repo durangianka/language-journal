@@ -15,7 +15,7 @@ export const jevClient: JevClient = {
       signal,
       cache: "no-store",
     });
-    if (!response.ok) throw new Error("Jev unavailable");
+    if (!response.ok) throw new Error(`Jev request failed (${response.status})`);
     const result = await response.json();
     return result.answers;
   },

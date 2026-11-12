@@ -98,7 +98,7 @@ test("provider failure is logged server-side and still finishes the call log", a
   const log = store();
   const client = { judge: vi.fn().mockRejectedValue(error) };
   expect(await judgeEntry(text, null, client, log)).toBeNull();
-  expect(logger).toHaveBeenCalledWith("Jev check failed", error);
+  expect(logger).toHaveBeenCalledWith("Jev check failed", { error, stack: error.stack });
   expect(log.finish).toHaveBeenCalledWith("call", null, expect.any(Number));
 });
 test("Jev cannot write explanations or corrected text into its note or log", async () => {

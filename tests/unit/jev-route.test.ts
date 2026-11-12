@@ -35,7 +35,10 @@ test("malformed JSON is logged and returns no note", async () => {
   const response = await POST(input);
   expect(response.status).toBe(200);
   expect(await response.json()).toBeNull();
-  expect(console.error).toHaveBeenCalledWith("Jev route failed", expect.any(SyntaxError));
+  expect(console.error).toHaveBeenCalledWith("Jev route failed", {
+    error: expect.any(SyntaxError),
+    stack: expect.stringContaining("SyntaxError: Unexpected end of JSON input"),
+  });
   expect(judgeEntry).not.toHaveBeenCalled();
 });
 
@@ -48,7 +51,7 @@ test.each(["lookup", "judge"])(
     const response = await POST(request());
     expect(response.status).toBe(200);
     expect(await response.json()).toBeNull();
-    expect(console.error).toHaveBeenCalledWith("Jev route failed", error);
+    expect(console.error).toHaveBeenCalledWith("Jev route failed", { error, stack: error.stack });
   },
 );
 
@@ -61,7 +64,7 @@ test("origin validation errors are inside the fail-open boundary", async () => {
   const response = await POST(input);
   expect(response.status).toBe(200);
   expect(await response.json()).toBeNull();
-  expect(console.error).toHaveBeenCalledWith("Jev route failed", error);
+  expect(console.error).toHaveBeenCalledWith("Jev route failed", { error, stack: error.stack });
 });
 
 test("cross-origin requests are rejected without a Jev call", async () => {

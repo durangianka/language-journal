@@ -37,7 +37,10 @@ export async function POST(request: Request) {
       ),
     );
   } catch (error) {
-    console.error("Jev route failed", error);
+    console.error("Jev route failed", {
+      error,
+      stack: error instanceof Error ? error.stack : undefined,
+    });
     return Response.json(null);
   }
 }
