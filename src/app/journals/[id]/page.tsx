@@ -4,6 +4,9 @@ import { JournalDetails, JournalDetailsSkeleton } from "@/components/journal-det
 import { JournalLayout } from "@/components/journal-layout";
 import { getDictionary, getLocale } from "@/i18n/server";
 
+// Allow initial analysis, one retry and one repair, each with a 20 second timeout.
+export const maxDuration = 90;
+
 export default async function JournalPage({
   params,
   searchParams,

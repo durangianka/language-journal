@@ -1,8 +1,24 @@
 import { sql } from "drizzle-orm";
-import { check, date, index, pgEnum, pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core";
+import {
+  check,
+  date,
+  index,
+  integer,
+  jsonb,
+  pgEnum,
+  pgTable,
+  primaryKey,
+  text,
+  timestamp,
+  uuid,
+} from "drizzle-orm/pg-core";
 
 import { maxFocusByLevel } from "../config/focus";
 import { languages, levels } from "../config/domain";
+import { locales } from "../config/locales";
+import { categories } from "../config/corrections";
+import type { FeedbackOutput } from "../lib/ai/schema";
+import { FEEDBACK_REASONS } from "../lib/feedback-contract";
 
 export const languageEnum = pgEnum("language", languages);
 export const levelEnum = pgEnum("level", levels);
@@ -18,6 +34,7 @@ export const journals = pgTable(
       .notNull()
       .default(sql`'{}'::text[]`),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    deletedAt: timestamp("deleted_at", { withTimezone: true }),
   },
   (table) => [
     check(
@@ -42,14 +59,97 @@ export const entries = pgTable(
     entryDate: date("entry_date", { mode: "string" }).notNull(),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+    deletedAt: timestamp("deleted_at", { withTimezone: true }),
   },
   (table) => [
     check("entries_body_not_blank", sql`${table.body} ~ '[^[:space:]]'`),
-    check("entries_body_max_length", sql`char_length(${table.body}) <= 5000`),
+    check("entries_body_max_length", sql`char_length(${table.body}) <= 2000`),
     index("entries_journal_date_created_idx").on(
       table.journalId,
       table.entryDate.desc(),
       table.createdAt.desc(),
     ),
+  ],
+);
+
+export const feedback = pgTable(
+  "feedback",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    entryId: uuid("entry_id")
+      .notNull()
+      .references(() => entries.id, { onDelete: "cascade" }),
+    analysedText: text("analysed_text").notNull(),
+    locale: text("locale", { enum: locales }).notNull(),
+    status: text("status", { enum: ["pending", "ready", "failed"] })
+      .notNull()
+      .default("pending"),
+    reasonCode: text("reason_code", { enum: FEEDBACK_REASONS }),
+    correctedText: text("corrected_text"),
+    corrections: jsonb("corrections").$type<FeedbackOutput["corrections"]>(),
+    model: text("model").notNull(),
+    promptVersion: text("prompt_version").notNull(),
+    attempts: integer("attempts").notNull().default(0),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    index("feedback_entry_created_idx").on(t.entryId, t.createdAt.desc()),
+    check("feedback_locale_valid", sql`${t.locale} in ('en', 'es', 'it')`),
+    check("feedback_status_valid", sql`${t.status} in ('pending', 'ready', 'failed')`),
+    check("feedback_attempts_valid", sql`${t.attempts} between 0 and 3`),
+    check(
+      "feedback_text_limit",
+      sql`char_length(${t.analysedText}) <= 2000 and char_length(${t.correctedText}) <= 2000`,
+    ),
+  ],
+);
+
+export const modelCalls = pgTable(
+  "model_calls",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    feedbackId: uuid("feedback_id")
+      .notNull()
+      .references(() => feedback.id, { onDelete: "cascade" }),
+    entryId: uuid("entry_id")
+      .notNull()
+      .references(() => entries.id, { onDelete: "cascade" }),
+    kind: text("kind", { enum: ["analysis", "retry", "repair"] }).notNull(),
+    outcome: text("outcome", { enum: ["reserved", "running", "ready", "failed"] }).notNull(),
+    reasonCode: text("reason_code", { enum: FEEDBACK_REASONS }),
+    durationMs: integer("duration_ms"),
+    inputTokens: integer("input_tokens"),
+    outputTokens: integer("output_tokens"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    index("model_calls_feedback_idx").on(t.feedbackId),
+    index("model_calls_entry_idx").on(t.entryId),
+    index("model_calls_created_idx").on(t.createdAt),
+    check("model_calls_kind_valid", sql`${t.kind} in ('analysis', 'retry', 'repair')`),
+    check(
+      "model_calls_outcome_valid",
+      sql`${t.outcome} in ('reserved', 'running', 'ready', 'failed')`,
+    ),
+  ],
+);
+
+export const journalMistakeCounts = pgTable(
+  "journal_mistake_counts",
+  {
+    journalId: uuid("journal_id")
+      .notNull()
+      .references(() => journals.id, { onDelete: "cascade" }),
+    category: text("category", { enum: categories }).notNull(),
+    count: integer("count").notNull().default(0),
+  },
+  (t) => [
+    primaryKey({ columns: [t.journalId, t.category] }),
+    check(
+      "journal_mistake_counts_category_valid",
+      sql`${t.category} in ('grammar', 'vocabulary', 'spelling', 'style')`,
+    ),
+    check("journal_mistake_counts_nonnegative", sql`${t.count} >= 0`),
   ],
 );

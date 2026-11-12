@@ -12,6 +12,7 @@ export type ErrorKey =
   | "invalidJournal"
   | "invalidBody"
   | "invalidDate"
+  | "journalFull"
   | "saveFailed";
 export type FieldErrors = Partial<Record<Field, ErrorKey>>;
 export type ActionResult = { success: true; id: string } | { success: false; errors: FieldErrors };

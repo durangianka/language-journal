@@ -3,6 +3,7 @@ import { focusAreas, maxFocusByLevel } from "../../config/focus";
 import { levels } from "../../config/domain";
 import { localeSchema } from "../../config/locales";
 import { today } from "./dates";
+import { LIMITS } from "../feedback-contract";
 
 export const idSchema = z.uuid();
 
@@ -25,7 +26,10 @@ export const createEntrySchema = z.strictObject({
   body: z
     .string()
     .refine((body) => body.trim().length > 0, "Body must not be blank")
-    .refine((body) => Array.from(body).length <= 5000, "Body must be at most 5000 characters"),
+    .refine(
+      (body) => Array.from(body).length <= LIMITS.entryMaxChars,
+      "Body must be at most 2000 characters",
+    ),
   entryDate: z.iso.date().default(today),
 });
 

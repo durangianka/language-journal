@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import { EntryForm } from "@/components/entry-form";
 import { JournalEntryGate } from "@/components/journal-review";
+import { SentenceCards } from "@/components/sentence-cards";
 import type { Dictionary } from "@/i18n/types";
 import { getJournal, listEntries } from "@/lib/journal";
 import { idSchema } from "@/lib/journal/schemas";
@@ -24,6 +25,7 @@ export async function NewEntryForm({
       entries={entries.map((entry) => ({ ...entry, latestFeedback: null }))}
       t={t}
     >
+      <SentenceCards language={journal.language} level={journal.level} t={t} />
       <EntryForm journalId={id} t={t} />
     </JournalEntryGate>
   );

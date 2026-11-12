@@ -114,7 +114,7 @@ test("creates journals and entries, sorts dates and creation times, and cascades
     await expect(
       db.insert(entries).values({
         journalId: journal.id,
-        body: "a".repeat(5001),
+        body: "a".repeat(2001),
         entryDate: "2026-02-02",
       }),
     ).rejects.toThrow();

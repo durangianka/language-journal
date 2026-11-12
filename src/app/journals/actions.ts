@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { createEntry, createJournal, getJournal } from "../../lib/journal";
+import { JournalFullError } from "../../lib/journal/errors";
 import {
   mapIssues,
   parseEntryForm,
@@ -31,7 +32,9 @@ export async function createEntryAction(form: FormData): Promise<ActionResult> {
     const entry = await createEntry(parsed.data);
     revalidatePath(`/journals/${entry.journalId}`);
     return { success: true, id: entry.id };
-  } catch {
+  } catch (error) {
+    if (error instanceof JournalFullError)
+      return { success: false, errors: { form: "journalFull" } };
     return { success: false, errors: { form: "saveFailed" } };
   }
 }
