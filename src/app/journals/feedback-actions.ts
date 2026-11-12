@@ -9,6 +9,7 @@ import {
   latestFeedback,
 } from "../../lib/ai/repository";
 import { openAIProvider } from "../../lib/ai/openai";
+import { testFeedbackProvider } from "../../lib/ai/test-provider";
 import { runFeedback } from "../../lib/ai/service";
 import { idSchema } from "../../lib/journal/schemas";
 import { localeSchema } from "../../config/locales";
@@ -29,9 +30,14 @@ export async function requestFeedback(
   try {
     // Only persisted text can be analysed. The caller supplies its current interface locale.
     const job = await beginFeedback(entryId, locale);
+    revalidatePath("/journals", "layout");
     after(async () => {
-      await runFeedback(job, feedbackStore, openAIProvider);
-      revalidatePath(`/journals/${job.journalId}`);
+      await runFeedback(
+        job,
+        feedbackStore,
+        process.env.FEEDBACK_TEST_MODE === "1" ? testFeedbackProvider : openAIProvider,
+      );
+      revalidatePath("/journals", "layout");
     });
     return { success: true, data: job.feedback };
   } catch (error) {

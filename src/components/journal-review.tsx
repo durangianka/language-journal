@@ -6,9 +6,7 @@ import { DeleteActions } from "@/components/delete-actions";
 import { DeletedNotice } from "@/components/deleted-notice";
 import { FeedbackStatus } from "@/components/feedback-status";
 import { JournalLink } from "@/components/journal-layout";
-import { useFeedbackStub } from "@/components/use-feedback-stub";
 import type { Dictionary, Locale } from "@/i18n/types";
-import { visibleEntries } from "@/lib/feedback-client";
 import { LIMITS, type EntryDto } from "@/lib/feedback-contract";
 import { formatDate } from "@/lib/journal/dates";
 
@@ -22,23 +20,15 @@ function LimitMessage({ t }: { t: Dictionary }) {
 }
 
 export function JournalEntryGate({
-  id,
   entries,
   t,
   children,
 }: {
-  id: string;
   entries: EntryDto[];
   t: Dictionary;
   children: ReactNode;
 }) {
-  const state = useFeedbackStub();
-  if (state.deletedJournals[id]) return <p>{t.invalidJournal}</p>;
-  return visibleEntries(entries, state).length >= LIMITS.entriesPerJournal ? (
-    <LimitMessage t={t} />
-  ) : (
-    children
-  );
+  return entries.length >= LIMITS.entriesPerJournal ? <LimitMessage t={t} /> : children;
 }
 
 export function JournalReview({
@@ -52,15 +42,7 @@ export function JournalReview({
   locale: Locale;
   t: Dictionary;
 }) {
-  const state = useFeedbackStub();
-  const entries = visibleEntries(initialEntries, state);
-  if (state.deletedJournals[id])
-    return (
-      <>
-        <p>{t.invalidJournal}</p>
-        <JournalLink href="/journals">{t.journals}</JournalLink>
-      </>
-    );
+  const entries = initialEntries;
   return (
     <>
       <DeletedNotice t={t} />

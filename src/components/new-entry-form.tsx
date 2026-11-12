@@ -19,11 +19,7 @@ export async function NewEntryForm({
   if (!journal) notFound();
 
   return (
-    <JournalEntryGate
-      id={id}
-      entries={entries.map((entry) => ({ ...entry, latestFeedback: null }))}
-      t={t}
-    >
+    <JournalEntryGate entries={entries} t={t}>
       <EntryForm journalId={id} t={t} />
     </JournalEntryGate>
   );
@@ -62,7 +58,7 @@ export function NewEntryFormSkeleton({ t }: { t: Dictionary }) {
         aria-hidden="true"
         className="h-64 w-full animate-pulse rounded-lg bg-muted motion-reduce:animate-none"
       />
-      <p className="text-right text-sm text-muted-foreground">0 / 5000 {t.characters}</p>
+      <p className="text-right text-sm text-muted-foreground">0 / 2000 {t.characters}</p>
       <div
         aria-hidden="true"
         className="h-11 w-full animate-pulse rounded-lg bg-muted motion-reduce:animate-none"

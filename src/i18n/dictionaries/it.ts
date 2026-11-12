@@ -48,8 +48,6 @@ export const it = {
   entryUnavailable: "Questa pagina non è disponibile.",
   journalEntryLimitReached:
     "Questo diario ha 10 pagine. Crea un nuovo diario per continuare a scrivere.",
-  feedbackDemoNotice:
-    "Anteprima di feedback ed eliminazione. Le modifiche restano in questo browser fino al collegamento al server.",
   appName: "Diario delle lingue",
   home: "Home",
   languages: "Lingua dell’interfaccia",

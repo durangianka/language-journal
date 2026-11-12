@@ -30,12 +30,7 @@ export async function EntriesList({
           label={t.entrySaved}
         />
       )}
-      <JournalReview
-        id={id}
-        initialEntries={entries.map((entry) => ({ ...entry, latestFeedback: null }))}
-        locale={locale}
-        t={t}
-      />
+      <JournalReview id={id} initialEntries={entries} locale={locale} t={t} />
     </>
   );
 }
