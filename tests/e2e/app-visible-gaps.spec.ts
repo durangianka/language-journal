@@ -198,7 +198,7 @@ for (const width of [375, 1280]) {
         ).toBeVisible();
         await page.getByRole("link", { name: "Back to journal", exact: true }).click();
         await expect(page.getByLabel("Journal insight", { exact: true })).toContainText(
-          "Grammar: 1",
+          "Grammar: 3",
         );
         await page.screenshot({
           path: `${screenshotDirectory}/insight-after-feedback-${width}.png`,
