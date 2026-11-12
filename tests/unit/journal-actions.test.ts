@@ -11,6 +11,7 @@ import { revalidatePath } from "next/cache";
 import { createEntryAction, createJournalAction } from "../../src/app/journals/actions";
 import { createEntry, createJournal, getJournal } from "../../src/lib/journal";
 import { dictionaries } from "../../src/i18n/dictionaries";
+import { JournalFullError } from "../../src/lib/journal/errors";
 import type { ErrorKey, Field } from "../../src/lib/journal/action-input";
 import {
   entryActionSchema,
@@ -38,6 +39,16 @@ function form(values: Record<string, string | string[]>): FormData {
 }
 
 beforeEach(() => vi.resetAllMocks());
+
+test("journal cap is a clear localized hard stop in the server action", async () => {
+  vi.mocked(getJournal).mockResolvedValue(journal);
+  vi.mocked(createEntry).mockRejectedValue(new JournalFullError());
+  expect(
+    await createEntryAction(form({ journalId: id, body: "Hello", entryDate: "2026-11-11" })),
+  ).toEqual({ success: false, errors: { form: "journalFull" } });
+  for (const dictionary of Object.values(dictionaries))
+    expect(dictionary.journalFull).toContain("10");
+});
 
 const expectedErrors: Record<Exclude<Field, "form">, ErrorKey> = {
   language: "invalidLanguage",
@@ -129,13 +140,13 @@ test.each([
 test("entry form rejects blank writing, oversize Unicode text, invalid dates and invalid IDs", () => {
   for (const values of [
     { journalId: id, body: "  ", entryDate: "2026-11-11" },
-    { journalId: id, body: "😀".repeat(5001), entryDate: "2026-11-11" },
+    { journalId: id, body: "😀".repeat(2001), entryDate: "2026-11-11" },
     { journalId: id, body: "Hello", entryDate: "2026-02-30" },
     { journalId: "bad", body: "Hello", entryDate: "2026-11-11" },
   ])
     expect(parseEntryForm(form(values)).success).toBe(false);
   expect(
-    parseEntryForm(form({ journalId: id, body: "😀".repeat(5000), entryDate: "2024-02-29" }))
+    parseEntryForm(form({ journalId: id, body: "😀".repeat(2000), entryDate: "2024-02-29" }))
       .success,
   ).toBe(true);
   const file = new FormData();
@@ -208,6 +219,7 @@ test("entry success returns the entry id and database failures map to form error
     id,
     createdAt: journal.createdAt,
     updatedAt: journal.createdAt,
+    latestFeedback: null,
   });
   expect(await createEntryAction(form(values))).toEqual({ success: true, id });
   expect(createEntry).toHaveBeenCalledWith(values);

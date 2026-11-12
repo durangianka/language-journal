@@ -1,4 +1,5 @@
 import type { CreateJournalInput } from "./schemas";
+import type { EntryDto } from "../feedback-contract";
 
 export interface Journal {
   id: string;
@@ -8,11 +9,4 @@ export interface Journal {
   createdAt: string;
 }
 
-export interface Entry {
-  id: string;
-  journalId: string;
-  body: string;
-  entryDate: string;
-  createdAt: string;
-  updatedAt: string;
-}
+export type Entry = EntryDto;

@@ -92,6 +92,7 @@ export type Dictionary = {
   invalidBody: string;
   invalidDate: string;
   saveFailed: string;
+  journalFull: string;
   enNewHint: string;
   enBasicHint: string;
   enIntermediateHint: string;
