@@ -1,10 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import { toast } from "sonner";
+import { restoreDeletedAction } from "@/app/journals/feedback-actions";
 import {
   AlertDialogRoot,
-  AlertDialogTrigger,
   AlertDialogContent,
   AlertDialogHeader,
   AlertDialogTitle,
@@ -13,6 +14,13 @@ import {
   AlertDialogCancel,
   AlertDialogAction,
 } from "@/components/ui/alert-dialog";
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuGroup,
+  DropdownMenuItem,
+} from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
 import type { Dictionary } from "@/i18n/types";
 import { deleteEntry, deleteJournal } from "@/lib/feedback-client";
@@ -31,6 +39,7 @@ export function DeleteActions({
   t: Dictionary;
 }) {
   const router = useRouter();
+  const menuTrigger = useRef<HTMLButtonElement>(null);
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(false);
@@ -45,6 +54,28 @@ export function DeleteActions({
         return;
       }
       setOpen(false);
+      if (mode === "soft") {
+        toast(kind === "entry" ? t.entryMovedToTrash : t.journalMovedToTrash, {
+          duration: 10000,
+          action: {
+            label: t.undo,
+            onClick: async () => {
+              try {
+                const restored = await restoreDeletedAction(id, kind);
+                if (!restored.success) {
+                  toast.error(t.restoreFailed);
+                  return;
+                }
+                toast.success(t.restored);
+                router.push(kind === "entry" ? returnTo : `/journals/${id}`);
+                router.refresh();
+              } catch {
+                toast.error(t.restoreFailed);
+              }
+            },
+          },
+        });
+      }
       router.push(`${returnTo}?deleted=${kind}-${mode}`);
       router.refresh();
     } catch {
@@ -58,29 +89,51 @@ export function DeleteActions({
       className="mt-6 flex flex-col gap-3 border-t pt-6"
     >
       <h2 className="font-semibold">{kind === "entry" ? t.entryActions : t.journalActions}</h2>
-      <Button
-        variant="secondary"
-        className="min-h-11 w-full"
-        disabled={busy}
-        onClick={() => void remove("soft")}
-      >
-        {t.moveToTrash}
-      </Button>
+      <DropdownMenu>
+        <DropdownMenuTrigger
+          render={
+            <Button
+              ref={menuTrigger}
+              variant="outline"
+              className="min-h-11 w-full"
+              disabled={busy}
+            />
+          }
+        >
+          {kind === "entry" ? t.entryActions : t.journalActions}
+        </DropdownMenuTrigger>
+        <DropdownMenuContent>
+          <DropdownMenuGroup>
+            <DropdownMenuItem
+              className="min-h-11"
+              disabled={busy}
+              onClick={() => void remove("soft")}
+            >
+              {t.moveToTrash}
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              className="min-h-11"
+              variant="destructive"
+              disabled={busy}
+              onClick={() => setOpen(true)}
+            >
+              {t.deletePermanently}
+            </DropdownMenuItem>
+          </DropdownMenuGroup>
+        </DropdownMenuContent>
+      </DropdownMenu>
       <AlertDialogRoot
         open={open}
         onOpenChange={(next) => {
           if (!busy) setOpen(next);
         }}
       >
-        <AlertDialogTrigger
-          render={<Button variant="destructive" className="min-h-11 w-full" disabled={busy} />}
-        >
-          {t.deletePermanently}
-        </AlertDialogTrigger>
-        <AlertDialogContent>
+        <AlertDialogContent finalFocus={menuTrigger}>
           <AlertDialogHeader>
             <AlertDialogTitle>
-              {kind === "entry" ? t.deletePermanentlyTitle : t.deleteJournalTitle}
+              {kind === "entry"
+                ? `${t.deletePermanentlyTitle} ${date ?? ""}`
+                : t.deleteJournalTitle}
             </AlertDialogTitle>
             <AlertDialogDescription>
               {kind === "entry"

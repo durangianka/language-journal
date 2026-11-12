@@ -3,6 +3,15 @@ import { locales, type Locale } from "../config/locales";
 export type { Locale } from "../config/locales";
 
 export type Dictionary = {
+  notifications: string;
+  browseCalendar: string;
+  noEntriesOnDay: string;
+  originalText: string;
+  noCorrections: string;
+  undo: string;
+  restored: string;
+  restoreFailed: string;
+  words: string;
   jevNoIssues: string;
   jevDetails: string;
   journalInsight: string;
