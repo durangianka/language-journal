@@ -1,13 +1,10 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useActionState, useEffect, useRef, useState } from "react";
 import { Languages, Plus, Signal } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { createJournalAction } from "@/app/journals/actions";
 import { FieldError } from "@/components/field-error";
-import { UnitedKingdomFlag } from "@/components/flags/united-kingdom";
-import { SpainFlag } from "@/components/flags/spain";
-import { ItalyFlag } from "@/components/flags/italy";
 import { Card } from "@/components/ui/card";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
@@ -19,10 +16,9 @@ import type { Locale } from "@/config/locales";
 import type { Dictionary } from "@/i18n/types";
 import type { ActionResult } from "@/lib/journal/action-input";
 
-const flags = { en: UnitedKingdomFlag, es: SpainFlag, it: ItalyFlag };
-
 export function JournalForm({ t }: { t: Dictionary }) {
   const router = useRouter();
+  const formRef = useRef<HTMLFormElement>(null);
   const [language, setLanguage] = useState<Locale | null>(null);
   const [selectedLevel, setSelectedLevel] = useState<(typeof levels)[number] | null>(null);
   const [focus, setFocus] = useState<string[]>([]);
@@ -37,9 +33,20 @@ export function JournalForm({ t }: { t: Dictionary }) {
     null,
   );
   const errors = state && !state.success ? state.errors : {};
+  useEffect(() => {
+    if (state && !state.success) {
+      formRef.current
+        ?.querySelector<HTMLElement>(
+          '[aria-invalid="true"] button, [aria-invalid="true"] [role="radio"], button[aria-invalid="true"]',
+        )
+        ?.focus();
+    }
+  }, [state]);
 
   return (
     <form
+      ref={formRef}
+      noValidate
       action={action}
       className="flex flex-col gap-8"
       // React resets radios even after a resolved failure. Success navigates away.
@@ -49,11 +56,12 @@ export function JournalForm({ t }: { t: Dictionary }) {
         <FieldSet aria-describedby="language-error">
           <FieldLegend className="flex items-center gap-2">
             <Languages aria-hidden="true" className="size-5" />
-            {t.chooseLanguage}
+            {t.journalLanguage}
           </FieldLegend>
           <input type="hidden" name="language" value={language ?? ""} />
           <ToggleGroup
             aria-invalid={Boolean(errors.language)}
+            aria-describedby="language-error"
             aria-label={t.chooseLanguage}
             variant="outline"
             className="w-full"
@@ -65,7 +73,6 @@ export function JournalForm({ t }: { t: Dictionary }) {
             disabled={pending}
           >
             {languages.map((value) => {
-              const Flag = flags[value];
               const label = t[languageLabelKeys[value]];
               return (
                 <ToggleGroupItem
@@ -74,9 +81,6 @@ export function JournalForm({ t }: { t: Dictionary }) {
                   aria-label={label}
                   className="min-h-14 min-w-0 flex-1 flex-col gap-1 px-1"
                 >
-                  <span aria-hidden="true">
-                    <Flag title={label} />
-                  </span>
                   <span>{label}</span>
                 </ToggleGroupItem>
               );
@@ -91,10 +95,10 @@ export function JournalForm({ t }: { t: Dictionary }) {
           </FieldLegend>
           <RadioGroup
             aria-invalid={Boolean(errors.level)}
+            aria-describedby="level-error"
             name="level"
             value={selectedLevel ?? ""}
             aria-label={t.chooseLevel}
-            required
             disabled={pending}
             onValueChange={(value) => {
               const next = levels.find((level) => level === value);

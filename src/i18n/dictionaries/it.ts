@@ -1,6 +1,19 @@
 import type { Dictionary } from "../types";
 
 export const it = {
+  interfaceLanguage: "Interfaccia",
+  journalLanguage: "Lingua del diario",
+  seeMore: "Mostra altro",
+  seeLess: "Mostra meno",
+  unsavedChanges: "Hai del testo non salvato. Vuoi uscire senza salvare?",
+  trash: "Cestino",
+  emptyTrashWarning:
+    "Vuoi eliminare definitivamente tutti gli elementi nel cestino? Questa azione non può essere annullata.",
+  emptyTrash: "Svuota cestino",
+  trashEmpty: "Il cestino è vuoto.",
+  restore: "Ripristina",
+  trashDescription:
+    "I diari e le voci eliminati rimangono qui finché non li ripristini o elimini definitivamente.",
   settings: "Impostazioni",
   loadingFeedbackSettings: "Caricamento impostazioni…",
   headerMenu: "Menu",

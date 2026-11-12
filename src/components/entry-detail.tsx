@@ -28,9 +28,17 @@ export function EntryDetail({
   const date = formatDate(entry.entryDate, locale);
   return (
     <>
-      <div className="flex flex-wrap items-center justify-between gap-2">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <time dateTime={entry.entryDate}>{date}</time>
         <Badge variant="secondary">{t[languageLabelKeys[language]]}</Badge>
+        <DeleteActions
+          id={entry.id}
+          kind="entry"
+          date={date}
+          returnTo={`/journals/${entry.journalId}`}
+          t={t}
+          onEdit={() => setEditing(true)}
+        />
       </div>
       {editing ? (
         <EntryForm
@@ -61,14 +69,6 @@ export function EntryDetail({
           />
         </>
       )}
-      <DeleteActions
-        id={entry.id}
-        kind="entry"
-        date={date}
-        returnTo={`/journals/${entry.journalId}`}
-        t={t}
-        onEdit={() => setEditing(true)}
-      />
     </>
   );
 }

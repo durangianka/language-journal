@@ -1,6 +1,19 @@
 import type { Dictionary } from "../types";
 
 export const es = {
+  interfaceLanguage: "Interfaz",
+  journalLanguage: "Idioma del diario",
+  seeMore: "Ver más",
+  seeLess: "Ver menos",
+  unsavedChanges: "Tienes texto sin guardar. ¿Salir sin guardar?",
+  trash: "Papelera",
+  emptyTrashWarning:
+    "¿Eliminar permanentemente todo lo que hay en la papelera? Esta acción no se puede deshacer.",
+  emptyTrash: "Vaciar papelera",
+  trashEmpty: "Tu papelera está vacía.",
+  restore: "Restaurar",
+  trashDescription:
+    "Los diarios y las entradas eliminados permanecen aquí hasta que los restaures o elimines permanentemente.",
   settings: "Ajustes",
   loadingFeedbackSettings: "Cargando ajustes…",
   headerMenu: "Menú",

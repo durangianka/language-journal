@@ -1,4 +1,7 @@
 import { JournalsOverview } from "@/components/journals-overview";
+import { JournalCalendar } from "@/components/journal-calendar";
+import { JournalInsight } from "@/components/journal-insight";
+import { languageLabelKeys } from "@/config/domain";
 import type { Dictionary, Locale } from "@/i18n/types";
 import { listEntries, listJournals } from "@/lib/journal";
 
@@ -13,7 +16,7 @@ export async function JournalsList({
 }) {
   const journals = await listJournals();
   const groups = await Promise.all(journals.map((journal) => listEntries(journal.id)));
-  return (
+  const overview = (
     <JournalsOverview
       journals={journals}
       entries={groups.flat()}
@@ -21,6 +24,26 @@ export async function JournalsList({
       locale={locale}
       showEntries={showEntries}
     />
+  );
+  const first = journals[0];
+  if (showEntries || !first) return overview;
+  return (
+    <div className="grid min-w-0 items-start gap-6 lg:grid-cols-[320px_minmax(0,1fr)]">
+      <aside className="flex min-w-0 flex-col gap-4">
+        <p className="text-sm font-medium text-muted-foreground">
+          {t[languageLabelKeys[first.language]]}
+        </p>
+        <JournalCalendar
+          dates={groups[0].map((entry) => entry.entryDate)}
+          journalId={first.id}
+          locale={locale}
+          t={t}
+          overview
+        />
+        <JournalInsight params={Promise.resolve({ id: first.id })} locale={locale} t={t} />
+      </aside>
+      {overview}
+    </div>
   );
 }
 

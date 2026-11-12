@@ -6,6 +6,7 @@ import type { ReactNode } from "react";
 import { DeleteActions } from "@/components/delete-actions";
 import { DeletedNotice } from "@/components/deleted-notice";
 import { FeedbackStatus } from "@/components/feedback-status";
+import { Badge } from "@/components/ui/badge";
 import { JournalLink } from "@/components/journal-layout";
 import { JournalCalendar } from "@/components/journal-calendar";
 import type { Dictionary, Locale } from "@/i18n/types";
@@ -54,9 +55,9 @@ export function JournalReview({
       {entries.length >= LIMITS.entriesPerJournal ? (
         <LimitMessage t={t} />
       ) : (
-        <JournalLink href={`/journals/${id}/entries/new`}>
+        <JournalLink href={`/journals/${id}/entries/new`} className="journal-new-entry">
           <PenLine aria-hidden="true" />
-          {t.newEntry}
+          <span className="sr-only sm:not-sr-only">{t.newEntry}</span>
         </JournalLink>
       )}
       <JournalCalendar
@@ -90,9 +91,24 @@ export function JournalReview({
                 className="flex min-h-11 flex-col gap-2 rounded-xl border p-5 hover:bg-muted focus-visible:outline-2"
               >
                 <div className="flex flex-wrap items-center justify-between gap-2">
-                  <FeedbackStatus feedback={entry.latestFeedback} t={t} />
+                  <time
+                    dateTime={entry.createdAt}
+                    className="text-xs font-medium text-muted-foreground"
+                  >
+                    {new Intl.DateTimeFormat(locale, { hour: "2-digit", minute: "2-digit" }).format(
+                      new Date(entry.createdAt),
+                    )}
+                  </time>
+                  <span className="flex items-center gap-2">
+                    <FeedbackStatus feedback={entry.latestFeedback} t={t} />
+                    {entry.latestFeedback?.status === "ready" && (
+                      <Badge variant="secondary">
+                        {t.correctionsHeading}: {entry.latestFeedback.corrections.length}
+                      </Badge>
+                    )}
+                  </span>
                 </div>
-                <p className="line-clamp-2 break-words whitespace-pre-wrap text-sm text-muted-foreground [overflow-wrap:anywhere]">
+                <p className="line-clamp-2 break-words whitespace-pre-wrap font-semibold [overflow-wrap:anywhere]">
                   {Array.from(entry.body).slice(0, 160).join("")}
                   {Array.from(entry.body).length > 160 ? "…" : ""}
                 </p>

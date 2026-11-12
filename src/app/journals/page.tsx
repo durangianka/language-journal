@@ -7,7 +7,7 @@ import { getDictionary, getLocale } from "@/i18n/server";
 export default async function JournalsPage() {
   const [t, locale] = await Promise.all([getDictionary(), getLocale()]);
   return (
-    <JournalLayout title={t.journals} back="/" backLabel={t.home}>
+    <JournalLayout className="max-w-5xl" title={t.journals} back="/" backLabel={t.home}>
       <JournalLink href="/journals/new">
         <Plus aria-hidden="true" />
         {t.newJournal}

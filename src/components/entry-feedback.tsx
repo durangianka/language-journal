@@ -1,9 +1,18 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { LoaderCircle, MessageSquare } from "lucide-react";
+import {
+  BookOpen,
+  Feather,
+  Languages,
+  LoaderCircle,
+  MessageSquare,
+  SpellCheck,
+} from "lucide-react";
 import { useRouter } from "next/navigation";
-import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { CorrectedProse } from "@/components/corrected-prose";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import {
   Accordion,
@@ -16,6 +25,13 @@ import type { Dictionary, Locale } from "@/i18n/types";
 import { getEntry, requestFeedback } from "@/lib/feedback-client";
 import { feedbackResultState, feedbackScreenState } from "@/lib/feedback-state";
 import { LIMITS, type EntryDto } from "@/lib/feedback-contract";
+
+const categoryIcons = {
+  grammar: BookOpen,
+  vocabulary: Languages,
+  spelling: SpellCheck,
+  style: Feather,
+};
 
 export function EntryFeedback({
   entry,
@@ -87,12 +103,13 @@ export function EntryFeedback({
     }
   }
   return (
-    <section aria-labelledby="feedback-heading" className="flex flex-col gap-4">
-      <h2 id="feedback-heading" className="flex items-center gap-2 text-xl font-semibold">
-        <MessageSquare aria-hidden="true" className="size-5" />
-        {t.feedbackHeading}
-      </h2>
-      <div role="status" aria-live="polite" aria-atomic="true" className="flex items-center gap-2">
+    <section aria-label={t.feedbackHeading} className="flex min-w-0 flex-col gap-4">
+      <div
+        role="status"
+        aria-live="polite"
+        aria-atomic="true"
+        className="flex items-center gap-2 rounded-xl bg-accent p-4 text-accent-foreground"
+      >
         {status === "pending" && (
           <span aria-hidden="true" className="inline-flex animate-spin motion-reduce:animate-none">
             <LoaderCircle className="size-5" />
@@ -121,97 +138,115 @@ export function EntryFeedback({
           {t.feedbackOutdated}
         </p>
       )}
-      <Tabs defaultValue="corrected">
-        <TabsList className="min-h-12 w-full" aria-label={t.yourEntry}>
-          <TabsTrigger value="corrected" className="min-h-11">
-            {t.correctedText}
-          </TabsTrigger>
-          <TabsTrigger value="original" className="min-h-11">
-            {t.originalText}
-          </TabsTrigger>
-        </TabsList>
-        <TabsContent value="corrected">
-          <Card>
-            <CardHeader>
-              <h3 className="font-semibold">{t.correctedText}</h3>
-            </CardHeader>
-            <CardContent>
-              {status === "ready" && feedback ? (
+      <div className="grid min-w-0 gap-6 lg:grid-cols-[minmax(0,1fr)_360px]">
+        <Tabs defaultValue="corrected" className="min-w-0">
+          <TabsList
+            variant="line"
+            className="mb-2 min-h-12 w-full border-b"
+            aria-label={t.yourEntry}
+          >
+            <TabsTrigger value="corrected" className="min-h-11">
+              {t.correctedText}
+            </TabsTrigger>
+            <TabsTrigger value="original" className="min-h-11">
+              {t.originalText}
+            </TabsTrigger>
+          </TabsList>
+          <TabsContent value="corrected">
+            <Card>
+              <CardContent>
+                {status === "ready" && feedback ? (
+                  <p
+                    lang={language}
+                    className="journal-prose break-words whitespace-pre-wrap [overflow-wrap:anywhere]"
+                  >
+                    <CorrectedProse
+                      text={feedback.correctedText ?? ""}
+                      corrections={feedback.corrections}
+                    />
+                  </p>
+                ) : status === "pending" ? (
+                  <FeedbackSkeleton label={t.correctedText} />
+                ) : (
+                  <p className="text-muted-foreground">
+                    {status === "failed" ? t.feedbackFailed : t.feedbackNoFeedback}
+                  </p>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+          <TabsContent value="original">
+            <Card>
+              <CardContent>
                 <p
                   lang={language}
-                  className="break-words whitespace-pre-wrap [overflow-wrap:anywhere]"
+                  className="journal-prose break-words whitespace-pre-wrap [overflow-wrap:anywhere]"
                 >
-                  {feedback.correctedText}
+                  {entry.body}
                 </p>
-              ) : status === "pending" ? (
-                <FeedbackSkeleton label={t.correctedText} />
-              ) : (
-                <p className="text-muted-foreground">
-                  {status === "failed" ? t.feedbackFailed : t.feedbackNoFeedback}
-                </p>
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
-        <TabsContent value="original">
-          <Card>
-            <CardHeader>
-              <h3 className="font-semibold">{t.yourEntry}</h3>
-            </CardHeader>
-            <CardContent>
-              <p
-                lang={language}
-                className="break-words whitespace-pre-wrap [overflow-wrap:anywhere]"
-              >
-                {entry.body}
+              </CardContent>
+            </Card>
+          </TabsContent>
+        </Tabs>
+        <aside className="min-w-0" aria-label={t.correctionsHeading}>
+          {status === "pending" && (
+            <div>
+              <h3 className="mb-2 font-semibold">{t.correctionsHeading}</h3>
+              <div className="rounded-xl border p-4">
+                <FeedbackSkeleton label={t.correctionsHeading} />
+              </div>
+            </div>
+          )}
+          {status === "ready" &&
+            feedback &&
+            (feedback.corrections.length === 0 ? (
+              <p role="note" className="rounded-lg border p-4">
+                {t.noCorrections}
               </p>
-            </CardContent>
-          </Card>
-        </TabsContent>
-      </Tabs>
-      {status === "pending" && (
-        <div>
-          <h3 className="mb-2 font-semibold">{t.correctionsHeading}</h3>
-          <div className="rounded-xl border p-4">
-            <FeedbackSkeleton label={t.correctionsHeading} />
-          </div>
-        </div>
-      )}
-      {status === "ready" &&
-        feedback &&
-        (feedback.corrections.length === 0 ? (
-          <p role="note" className="rounded-lg border p-4">
-            {t.noCorrections}
-          </p>
-        ) : (
-          <div>
-            <h3 className="mb-2 font-semibold">{t.correctionsHeading}</h3>
-            <Accordion key={feedback.id} defaultValue={["correction-0"]}>
-              {feedback.corrections
-                .slice(0, LIMITS.correctionsPerFeedback)
-                .map((correction, index) => (
-                  <AccordionItem key={index} value={"correction-" + index}>
-                    <AccordionTrigger className="min-h-11 gap-3 px-2">
-                      <span className="flex min-w-0 flex-col gap-1">
-                        <span>{t[correction.category]}</span>
-                        <span lang={language} className="break-words [overflow-wrap:anywhere]">
-                          <s className="text-muted-foreground">{correction.original}</s>
-                          {" → "}
-                          {correction.fix}
-                        </span>
-                      </span>
-                    </AccordionTrigger>
-                    <AccordionContent className="px-2">
-                      <dl className="flex flex-col gap-2 break-words [overflow-wrap:anywhere]">
-                        <dt className="font-semibold">{t.explanation}</dt>
-                        <dd lang={feedback.locale}>{correction.explanation}</dd>
-                      </dl>
-                    </AccordionContent>
-                  </AccordionItem>
-                ))}
-            </Accordion>
-          </div>
-        ))}
+            ) : (
+              <div>
+                <h3 className="mb-2 font-semibold">{t.correctionsHeading}</h3>
+                <Accordion key={feedback.id} defaultValue={["correction-0"]} className="gap-3">
+                  {feedback.corrections
+                    .slice(0, LIMITS.correctionsPerFeedback)
+                    .map((correction, index) => {
+                      const CategoryIcon = categoryIcons[correction.category];
+                      return (
+                        <AccordionItem
+                          key={index}
+                          value={"correction-" + index}
+                          className="rounded-xl border bg-card p-4"
+                        >
+                          <AccordionTrigger className="min-h-12 gap-3">
+                            <span className="flex min-w-0 flex-col gap-1">
+                              <Badge variant={correction.category}>
+                                <CategoryIcon aria-hidden="true" />
+                                {t[correction.category]}
+                              </Badge>
+                              <span
+                                lang={language}
+                                className="break-words text-base [overflow-wrap:anywhere]"
+                              >
+                                <s className="text-muted-foreground">{correction.original}</s>
+                                {" → "}
+                                {correction.fix}
+                              </span>
+                            </span>
+                          </AccordionTrigger>
+                          <AccordionContent>
+                            <dl className="flex flex-col gap-2 break-words text-base [overflow-wrap:anywhere]">
+                              <dt className="font-semibold">{t.explanation}</dt>
+                              <dd lang={feedback.locale}>{correction.explanation}</dd>
+                            </dl>
+                          </AccordionContent>
+                        </AccordionItem>
+                      );
+                    })}
+                </Accordion>
+              </div>
+            ))}
+        </aside>
+      </div>
       <Button
         className="min-h-11 w-full"
         disabled={status === "pending"}

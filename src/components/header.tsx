@@ -21,17 +21,20 @@ export function Header({ locale, dictionary: t }: IHeaderProps) {
   } satisfies Record<Locale, { name: string; Flag: typeof UnitedKingdomFlag }>;
 
   return (
-    <header className="border-b">
+    <header className="border-b bg-card">
       <div className="mx-auto flex max-w-5xl flex-wrap items-center justify-between gap-3 px-4 py-4 sm:px-6">
         <Link
           href="/"
           aria-label={t.home}
-          className="inline-flex min-h-11 min-w-11 items-center rounded-sm text-sm font-semibold focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ring sm:text-base"
+          className="inline-flex min-h-11 min-w-11 items-center rounded-lg font-heading text-xl font-semibold focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ring"
         >
           {t.appName}
         </Link>
         <div className="flex min-w-0 flex-wrap items-center gap-1">
-          <nav aria-label={t.languages} className="flex flex-wrap gap-1">
+          <nav aria-label={t.interfaceLanguage} className="flex flex-wrap items-center gap-1">
+            <span className="mr-1 text-xs font-medium text-muted-foreground">
+              {t.interfaceLanguage}
+            </span>
             {locales.map((value) => {
               const { name, Flag } = languages[value];
               return (
@@ -49,13 +52,13 @@ export function Header({ locale, dictionary: t }: IHeaderProps) {
                     <span aria-hidden="true">
                       <Flag title={name} />
                     </span>
-                    <span>{name}</span>
+                    <span className="sr-only sm:not-sr-only">{name}</span>
                   </Button>
                 </form>
               );
             })}
           </nav>
-          <HeaderMenu label={t.headerMenu} settingsLabel={t.settings} />
+          <HeaderMenu label={t.headerMenu} settingsLabel={t.settings} trashLabel={t.trash} />
         </div>
       </div>
     </header>

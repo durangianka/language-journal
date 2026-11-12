@@ -331,3 +331,30 @@
     min-height: calc(100dvh - 8rem);
   }
 }
+.week-day[data-has-entries="true"]::after {
+  content: "";
+  position: absolute;
+  bottom: 4px;
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: var(--primary);
+}
+.week-day[aria-current="date"] {
+  outline: 2px solid var(--ring);
+  outline-offset: -2px;
+}
+.week-day[aria-pressed="true"] {
+  background: var(--secondary);
+}
+@media (max-width: 639px) {
+  .journal-new-entry {
+    position: fixed;
+    right: 1rem;
+    bottom: max(1rem, env(safe-area-inset-bottom));
+    width: 56px;
+    height: 56px;
+    z-index: 10;
+    border-radius: 1rem;
+  }
+}

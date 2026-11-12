@@ -1,6 +1,18 @@
 import type { Dictionary } from "../types";
 
 export const en = {
+  interfaceLanguage: "Interface",
+  journalLanguage: "Journal language",
+  seeMore: "See more",
+  seeLess: "See less",
+  unsavedChanges: "You have unsaved writing. Leave without saving?",
+  trash: "Trash",
+  emptyTrashWarning: "Permanently delete everything currently in the trash? This cannot be undone.",
+  emptyTrash: "Empty trash",
+  trashEmpty: "Your trash is empty.",
+  restore: "Restore",
+  trashDescription:
+    "Deleted journals and entries stay here until you restore or permanently delete them.",
   settings: "Settings",
   loadingFeedbackSettings: "Loading settings…",
   headerMenu: "Menu",
