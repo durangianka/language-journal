@@ -2,7 +2,8 @@
 
 import { DeleteActions } from "@/components/delete-actions";
 import { EntryFeedback } from "@/components/entry-feedback";
-import { Card, CardHeader, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { languageLabelKeys } from "@/config/domain";
 import type { Dictionary, Locale } from "@/i18n/types";
 import type { EntryDto } from "@/lib/feedback-contract";
 import { formatDate } from "@/lib/journal/dates";
@@ -22,17 +23,10 @@ export function EntryDetail({
   const date = formatDate(entry.entryDate, locale);
   return (
     <>
-      <time dateTime={entry.entryDate}>{date}</time>
-      <Card>
-        <CardHeader>
-          <h2 className="font-semibold">{t.yourEntry}</h2>
-        </CardHeader>
-        <CardContent>
-          <p lang={language} className="break-words whitespace-pre-wrap [overflow-wrap:anywhere]">
-            {entry.body}
-          </p>
-        </CardContent>
-      </Card>
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <time dateTime={entry.entryDate}>{date}</time>
+        <Badge variant="secondary">{t[languageLabelKeys[language]]}</Badge>
+      </div>
       <EntryFeedback entry={entry} language={language} locale={locale} t={t} />
       <DeleteActions
         id={entry.id}

@@ -3,18 +3,18 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import {
+  Accordion,
+  AccordionItem,
+  AccordionTrigger,
+  AccordionContent,
+} from "@/components/ui/accordion";
 import { Button } from "@/components/ui/button";
 import type { Dictionary, Locale } from "@/i18n/types";
 import { getEntry, requestFeedback } from "@/lib/feedback-client";
 import { feedbackResultState, feedbackScreenState } from "@/lib/feedback-state";
-import { LIMITS, type EntryDto, type FeedbackCategory } from "@/lib/feedback-contract";
-
-const categoryColors: Record<FeedbackCategory, string> = {
-  grammar: "bg-blue-100 text-blue-950 dark:bg-blue-950 dark:text-blue-100",
-  vocabulary: "bg-violet-100 text-violet-950 dark:bg-violet-950 dark:text-violet-100",
-  spelling: "bg-amber-100 text-amber-950 dark:bg-amber-950 dark:text-amber-100",
-  style: "bg-emerald-100 text-emerald-950 dark:bg-emerald-950 dark:text-emerald-100",
-};
+import { LIMITS, type EntryDto } from "@/lib/feedback-contract";
 
 export function EntryFeedback({
   entry,
@@ -109,60 +109,87 @@ export function EntryFeedback({
           </time>
         </p>
       )}
-      {status === "ready" && feedback && (
-        <>
+      <Tabs defaultValue="corrected">
+        <TabsList className="min-h-12 w-full" aria-label={t.yourEntry}>
+          <TabsTrigger value="corrected" className="min-h-11">
+            {t.correctedText}
+          </TabsTrigger>
+          <TabsTrigger value="original" className="min-h-11">
+            {t.originalText}
+          </TabsTrigger>
+        </TabsList>
+        <TabsContent value="corrected">
           <Card>
             <CardHeader>
               <h3 className="font-semibold">{t.correctedText}</h3>
+            </CardHeader>
+            <CardContent>
+              {status === "ready" && feedback ? (
+                <p
+                  lang={language}
+                  className="break-words whitespace-pre-wrap [overflow-wrap:anywhere]"
+                >
+                  {feedback.correctedText}
+                </p>
+              ) : (
+                <p className="text-muted-foreground">
+                  {status === "pending" ? t.feedbackPending : t.feedbackNoFeedback}
+                </p>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+        <TabsContent value="original">
+          <Card>
+            <CardHeader>
+              <h3 className="font-semibold">{t.yourEntry}</h3>
             </CardHeader>
             <CardContent>
               <p
                 lang={language}
                 className="break-words whitespace-pre-wrap [overflow-wrap:anywhere]"
               >
-                {feedback.correctedText}
+                {entry.body}
               </p>
             </CardContent>
           </Card>
-          {feedback.corrections.length > 0 && (
-            <h3 className="font-semibold">{t.correctionsHeading}</h3>
-          )}
-          <ul className="flex flex-col gap-3">
-            {feedback.corrections
-              .slice(0, LIMITS.correctionsPerFeedback)
-              .map((correction, index) => (
-                <li key={`${index}-${correction.original}`}>
-                  <Card>
-                    <CardHeader>
-                      <span
-                        className={`w-fit rounded px-2 py-1 text-sm font-semibold ${categoryColors[correction.category]}`}
-                      >
-                        {t[correction.category]}
+        </TabsContent>
+      </Tabs>
+      {status === "ready" &&
+        feedback &&
+        (feedback.corrections.length === 0 ? (
+          <p role="note" className="rounded-lg border p-4">
+            {t.noCorrections}
+          </p>
+        ) : (
+          <div>
+            <h3 className="mb-2 font-semibold">{t.correctionsHeading}</h3>
+            <Accordion key={feedback.id} defaultValue={["correction-0"]}>
+              {feedback.corrections
+                .slice(0, LIMITS.correctionsPerFeedback)
+                .map((correction, index) => (
+                  <AccordionItem key={index} value={"correction-" + index}>
+                    <AccordionTrigger className="min-h-11 gap-3 px-2">
+                      <span className="flex min-w-0 flex-col gap-1">
+                        <span>{t[correction.category]}</span>
+                        <span lang={language} className="break-words [overflow-wrap:anywhere]">
+                          <s className="text-muted-foreground">{correction.original}</s>
+                          {" → "}
+                          {correction.fix}
+                        </span>
                       </span>
-                    </CardHeader>
-                    <CardContent>
+                    </AccordionTrigger>
+                    <AccordionContent className="px-2">
                       <dl className="flex flex-col gap-2 break-words [overflow-wrap:anywhere]">
-                        <dt className="font-semibold">{t.originalWords}</dt>
-                        <dd>
-                          <mark
-                            lang={language}
-                            className={`rounded px-1 ${categoryColors[correction.category]}`}
-                          >
-                            {correction.original}
-                          </mark>
-                        </dd>
-                        <dt className="font-semibold">{t.suggestedFix}</dt>
-                        <dd lang={language}>{correction.fix}</dd>
                         <dt className="font-semibold">{t.explanation}</dt>
                         <dd lang={feedback.locale}>{correction.explanation}</dd>
                       </dl>
-                    </CardContent>
-                  </Card>
-                </li>
-              ))}
-          </ul>
-        </>
-      )}
+                    </AccordionContent>
+                  </AccordionItem>
+                ))}
+            </Accordion>
+          </div>
+        ))}
       <Button
         className="min-h-11 w-full"
         disabled={status === "pending"}

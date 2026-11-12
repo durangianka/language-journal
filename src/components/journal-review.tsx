@@ -6,6 +6,7 @@ import { DeleteActions } from "@/components/delete-actions";
 import { DeletedNotice } from "@/components/deleted-notice";
 import { FeedbackStatus } from "@/components/feedback-status";
 import { JournalLink } from "@/components/journal-layout";
+import { JournalCalendar } from "@/components/journal-calendar";
 import type { Dictionary, Locale } from "@/i18n/types";
 import { LIMITS, type EntryDto } from "@/lib/feedback-contract";
 import { formatDate } from "@/lib/journal/dates";
@@ -51,21 +52,37 @@ export function JournalReview({
       ) : (
         <JournalLink href={`/journals/${id}/entries/new`}>{t.newEntry}</JournalLink>
       )}
+      <JournalCalendar
+        dates={entries.map((entry) => entry.entryDate)}
+        journalId={id}
+        locale={locale}
+        t={t}
+      />
       <h2 className="text-xl font-semibold">{t.entries}</h2>
       {entries.length === 0 ? (
         <p className="rounded-xl border p-5 text-muted-foreground">{t.emptyEntries}</p>
       ) : (
         <ul className="flex flex-col gap-3">
-          {entries.map((entry) => (
-            <li key={entry.id}>
+          {entries.map((entry, index) => (
+            <li
+              key={entry.id}
+              id={
+                index === 0 || entries[index - 1].entryDate !== entry.entryDate
+                  ? `entries-${entry.entryDate}`
+                  : undefined
+              }
+              className="scroll-mt-4"
+            >
+              {(index === 0 || entries[index - 1].entryDate !== entry.entryDate) && (
+                <h3 className="mb-2 mt-3 font-semibold">
+                  <time dateTime={entry.entryDate}>{formatDate(entry.entryDate, locale)}</time>
+                </h3>
+              )}
               <Link
                 href={`/journals/${id}/entries/${entry.id}`}
                 className="flex min-h-11 flex-col gap-2 rounded-xl border p-5 hover:bg-muted focus-visible:outline-2"
               >
                 <div className="flex flex-wrap items-center justify-between gap-2">
-                  <time dateTime={entry.entryDate} className="font-semibold">
-                    {formatDate(entry.entryDate, locale)}
-                  </time>
                   <FeedbackStatus feedback={entry.latestFeedback} t={t} />
                 </div>
                 <p className="line-clamp-2 break-words whitespace-pre-wrap text-sm text-muted-foreground [overflow-wrap:anywhere]">

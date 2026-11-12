@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { buttonVariants } from "@/components/ui/button";
+import { cn } from "cn";
 export { formatDate } from "@/lib/journal/dates";
 
 export function JournalLayout({
@@ -10,6 +11,7 @@ export function JournalLayout({
   backLabel,
   heading,
   navigation,
+  className,
 }: {
   title: string;
   children: ReactNode;
@@ -17,9 +19,15 @@ export function JournalLayout({
   backLabel: string;
   heading?: ReactNode;
   navigation?: ReactNode;
+  className?: string;
 }) {
   return (
-    <main className="mx-auto flex w-full max-w-xl flex-1 flex-col gap-6 px-4 py-6 sm:py-10">
+    <main
+      className={cn(
+        "mx-auto flex w-full max-w-xl flex-1 flex-col gap-6 px-4 py-6 sm:py-10",
+        className,
+      )}
+    >
       {navigation ?? (
         <Link
           href={back}

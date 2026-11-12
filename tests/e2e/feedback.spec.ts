@@ -103,7 +103,8 @@ test("old entry opens, requests fake-model feedback, announces pending and retai
   ).toBeDisabled();
   await expect(page.getByRole("status")).toHaveText(dictionaries.en.feedbackReady);
   await expect(page.getByText("I go to school.", { exact: true })).toBeVisible();
-  await expect(page.locator("mark")).toHaveText("I goes");
+  await expect(page.locator("[data-slot=accordion-trigger] s")).toHaveText("I goes");
+  await page.getByRole("tab", { name: "Original", exact: true }).click();
   await expect(page.getByText("I goes to school.", { exact: true })).toBeVisible();
   await mobileChecks(page);
   await page.reload();
@@ -119,7 +120,10 @@ test("creates a journal and entry, persists fake-model feedback, then soft delet
   page,
 }) => {
   await page.goto("/journals/new");
-  await page.getByRole("radio", { name: "English", exact: true }).check();
+  await page
+    .getByRole("group", { name: "Choose a language", exact: true })
+    .getByRole("button", { name: "English", exact: true })
+    .click();
   await page.getByRole("radio", { name: "Basic · A2", exact: true }).check();
   await page.getByRole("button", { name: "Create journal", exact: true }).tap();
   await expect(page).toHaveURL(/\/journals\/[a-f0-9-]+$/);
@@ -141,7 +145,8 @@ test("creates a journal and entry, persists fake-model feedback, then soft delet
   await expect(page.getByText("I go to school.", { exact: true })).toBeVisible();
   await page.reload();
   await expect(page.getByRole("status")).toHaveText(dictionaries.en.feedbackReady);
-  await page.getByRole("button", { name: "Move to trash", exact: true }).tap();
+  await page.getByRole("button", { name: dictionaries.en.entryActions, exact: true }).tap();
+  await page.getByRole("menuitem", { name: "Move to trash", exact: true }).tap();
   await expect(page.getByRole("status")).toHaveText(dictionaries.en.entryMovedToTrash);
   await expect(page.locator(`a[href="${href}"]`)).toHaveCount(0);
   const sql = postgres(testDatabaseUrl());
@@ -201,9 +206,15 @@ test("review rows show every status and ready feedback displays no more than thr
     { ...feedback("pending"), entryId: entries[1].id },
     { ...feedback("failed"), entryId: entries[2].id, reason: "timeout" },
   ]);
-  await expect(page.locator("mark")).toHaveCount(3);
+  await expect(page.locator("[data-slot=accordion-trigger] s")).toHaveCount(3);
   for (const category of FEEDBACK_CATEGORIES.slice(0, 3))
     await expect(page.getByText(dictionaries.en[category], { exact: true })).toBeVisible();
+  const corrections = page.locator("[data-slot=accordion-trigger]");
+  await expect(corrections.first()).toHaveAttribute("aria-expanded", "true");
+  await expect(corrections.nth(1)).toHaveAttribute("aria-expanded", "false");
+  await corrections.nth(1).tap();
+  await expect(corrections.first()).toHaveAttribute("aria-expanded", "false");
+  await expect(corrections.nth(1)).toHaveAttribute("aria-expanded", "true");
   await mobileChecks(page);
   ready.corrections = [ready.corrections[3]];
   await store(page, [ready]);
@@ -249,13 +260,12 @@ for (const locale of ["en", "es", "it"]) {
     await expect(page.getByText(t.grammar, { exact: true })).toBeVisible();
     await expect(page.locator("dd").last()).toHaveAttribute("lang", locale);
     await mobileChecks(page);
-    await page.getByRole("button", { name: t.deletePermanently, exact: true }).tap();
+    await page.getByRole("button", { name: t.entryActions, exact: true }).tap();
+    await page.getByRole("menuitem", { name: t.deletePermanently, exact: true }).tap();
     await expect(page.getByRole("alertdialog")).toContainText(t.deletePermanentlyTitle);
     await mobileChecks(page);
     await page.getByRole("button", { name: t.cancel, exact: true }).tap();
-    await expect(
-      page.getByRole("button", { name: t.deletePermanently, exact: true }),
-    ).toBeFocused();
+    await expect(page.getByRole("button", { name: t.entryActions, exact: true })).toBeFocused();
   });
 }
 
@@ -274,7 +284,8 @@ test("ten-entry cap blocks creation and the server preserves the cap after soft 
   await expect(page.getByText(dictionaries.en.journalEntryLimitReached)).toBeVisible();
   await expect(page.locator("textarea")).toHaveCount(0);
   await page.goto(detail());
-  await page.getByRole("button", { name: "Move to trash", exact: true }).tap();
+  await page.getByRole("button", { name: dictionaries.en.entryActions, exact: true }).tap();
+  await page.getByRole("menuitem", { name: "Move to trash", exact: true }).tap();
   await expect(page).toHaveURL(new RegExp(`/journals/${journalId}\\?deleted=entry-soft$`));
   await expect(page.getByRole("status")).toHaveText(dictionaries.en.entryMovedToTrash);
   await expect(page.locator("main:visible li")).toHaveCount(9);
@@ -297,8 +308,9 @@ test("permanent entry deletion warns with its date, traps focus, cancels and the
   await page.goto(detail());
   await page.getByRole("button", { name: "Get feedback", exact: true }).tap();
   await expect(page.getByRole("status")).toHaveText(dictionaries.en.feedbackReady);
-  const trigger = page.getByRole("button", { name: "Delete permanently", exact: true });
+  const trigger = page.getByRole("button", { name: dictionaries.en.entryActions, exact: true });
   await trigger.tap();
+  await page.getByRole("menuitem", { name: "Delete permanently", exact: true }).tap();
   const dialog = page.getByRole("alertdialog");
   await expect(dialog).toContainText("November 1, 2026");
   await expect(dialog).toContainText("cannot be restored");
@@ -307,6 +319,7 @@ test("permanent entry deletion warns with its date, traps focus, cancels and the
   await expect(dialog).toHaveCount(0);
   await expect(trigger).toBeFocused();
   await trigger.tap();
+  await page.getByRole("menuitem", { name: "Delete permanently", exact: true }).tap();
   for (let index = 0; index < 4; index++) {
     await page.keyboard.press("Tab");
     await expect
@@ -336,10 +349,12 @@ for (const mode of ["soft", "hard"]) {
     page,
   }) => {
     await page.goto(`/journals/${journalId}`);
-    if (mode === "soft")
-      await page.getByRole("button", { name: "Move to trash", exact: true }).tap();
-    else {
-      await page.getByRole("button", { name: "Delete permanently", exact: true }).tap();
+    if (mode === "soft") {
+      await page.getByRole("button", { name: dictionaries.en.journalActions, exact: true }).tap();
+      await page.getByRole("menuitem", { name: "Move to trash", exact: true }).tap();
+    } else {
+      await page.getByRole("button", { name: /actions$/i }).tap();
+      await page.getByRole("menuitem", { name: "Delete permanently", exact: true }).tap();
       await expect(page.getByRole("alertdialog")).toContainText(
         dictionaries.en.deleteJournalWarning,
       );
