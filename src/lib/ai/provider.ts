@@ -1,6 +1,7 @@
 import type { languages, levels } from "../../config/domain";
 import type { focusAreas } from "../../config/focus";
 import type { Locale } from "../../config/locales";
+import type { FeedbackSettings } from "../settings/schema";
 
 export const model = "gpt-6-luna";
 export type CallKind = "analysis" | "retry" | "repair";
@@ -10,6 +11,8 @@ export type AnalysisInput = {
   level: (typeof levels)[number];
   focus: readonly (typeof focusAreas)[number][];
   locale: Locale;
+  settings?: FeedbackSettings;
+  taskRegister?: "informal" | "formal";
   repair?: { output: string; reason: string };
 };
 export type ModelResult = {

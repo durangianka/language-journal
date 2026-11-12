@@ -1,0 +1,40 @@
+// Verified examples from origin/research/shorthand:out/report.md.
+// These are context clues, not automatic replacements. Ambiguity needs surrounding text.
+export const verifiedShorthand = {
+  it: {
+    x: "per",
+    xké: "perché",
+    "+": "più",
+    "6": "sei",
+    cmq: "comunque",
+    nn: "non",
+    tt: "tutto",
+    anke: "anche",
+    ke: "che",
+    TVB: "ti voglio bene",
+    LOL: "laughing out loud (borrowed chat initialism)",
+    ASAP: "as soon as possible (borrowed chat initialism)",
+    IMHO: "in my humble opinion (borrowed chat initialism)",
+  },
+  es: {
+    xq: "porque / por qué (syntax dependent)",
+    pq: "porque / por qué (syntax dependent)",
+    tb: "también",
+    q: "que",
+    x: "por",
+    xo: "pero / yo (region and context dependent)",
+    xfa: "por favor",
+    salu2: "saludos",
+    bienv2: "bienvenidos",
+  },
+  en: {
+    ASAP: "as soon as possible",
+    IDK: "I don't know",
+    LOL: "laughing out loud",
+    BTW: "by the way",
+    gr8: "great",
+    ur: "your / you're (syntax dependent)",
+    TBH: "to be honest",
+    u: "you",
+  },
+};
