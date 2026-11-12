@@ -48,7 +48,7 @@ for (const locale of locales) {
       expect(requests).toHaveLength(0);
       await body.fill("I goes to school every morning and read a book about travelling.");
       await date.focus();
-      await expect(page.locator("#jev-note")).toHaveText(`${t.grammar}. ${t.jevDetails}`);
+      await expect(page.locator("#jev-note")).toHaveText(`${t.jevGrammar} ${t.jevDetails}`);
       await page.screenshot({
         path: `${screenshotDirectory}/jev-${locale}-375.png`,
         fullPage: true,
@@ -115,7 +115,7 @@ for (const width of [375, 1280]) {
         await page.getByRole("textbox", { name: "Your entry", exact: true }).fill(original);
         await page.getByRole("button", { name: "Entry date", exact: true }).focus();
         await expect(page.locator("#jev-note")).toHaveText(
-          "Grammar. Get feedback gives the detail.",
+          "Possible grammar issue. Get feedback to see the fix.",
         );
         await touchTargets(page);
         await page.screenshot({ path: `${screenshotDirectory}/jev-${width}.png`, fullPage: true });

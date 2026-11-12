@@ -62,7 +62,7 @@ for (const width of [375, 1280]) {
         const body = "I goes to school every morning and read a book about travelling.";
         await page.getByRole("textbox", { name: t.yourEntry, exact: true }).fill(body);
         await page.getByRole("button", { name: t.entryDate, exact: true }).focus();
-        await expect(page.locator("#jev-note")).toHaveText(`${t.grammar}. ${t.jevDetails}`);
+        await expect(page.locator("#jev-note")).toHaveText(`${t.jevGrammar} ${t.jevDetails}`);
         await page.getByRole("button", { name: t.saveEntry, exact: true }).click();
         await expect(page).toHaveURL(new RegExp(`/journals/${journalId}/entries/[a-f0-9-]+$`));
         const entryId = new URL(page.url()).pathname.split("/").at(-1);

@@ -26,9 +26,9 @@ afterEach(() => vi.useRealTimers());
 
 test("none at the confidence threshold produces the fixed no-issues note", async () => {
   const log = store();
-  expect(await judgeEntry(text, null, { judge: async () => result("none", 0.85) }, log)).toEqual({
+  expect(await judgeEntry(text, null, { judge: async () => result("none", 0.5) }, log)).toEqual({
     issue: "none",
-    confidence: 0.85,
+    confidence: 0.5,
   });
   expect(log.finish).toHaveBeenCalledWith("call", expect.any(Object), expect.any(Number));
 });
@@ -38,11 +38,31 @@ test("a confident category result contains only a label and confidence", async (
     confidence: 0.95,
   });
 });
-test("low confidence and short entries stay hidden", async () => {
-  const client = { judge: vi.fn(async () => result("grammar", 0.84)) };
-  expect(await judgeEntry(text, null, client, store())).toBeNull();
-  expect(await judgeEntry("Short entry", null, client, store())).toBeNull();
-  expect(client.judge).toHaveBeenCalledTimes(1);
+test("short entries stay hidden", async () => {
+  const client = { judge: vi.fn(async () => result()) };
+  expect(await judgeEntry("Short", null, client, store())).toBeNull();
+  expect(client.judge).not.toHaveBeenCalled();
+});
+
+test.each([0.1, 0.4, 0.499, 0.5, 0.84])(
+  "confidence %f shows a category or uncertainty",
+  async (confidence) => {
+    expect(
+      await judgeEntry(text, null, { judge: async () => result("spelling", confidence) }, store()),
+    ).toEqual({
+      issue: confidence >= 0.5 ? "spelling" : "uncertain",
+      confidence,
+    });
+  },
+);
+
+test.each([7, 8])("%i characters respect the blur check threshold", async (length) => {
+  const client = { judge: vi.fn(async () => result()) };
+  const log = store();
+  const note = await judgeEntry("a".repeat(length), null, client, log);
+  expect(client.judge).toHaveBeenCalledTimes(length === 8 ? 1 : 0);
+  expect(log.reserve).toHaveBeenCalledTimes(length === 8 ? 1 : 0);
+  expect(note).toEqual(length === 8 ? { issue: "grammar", confidence: 0.95 } : null);
 });
 test("timeout aborts the client, logs the failed call and shows nothing", async () => {
   vi.useFakeTimers();
@@ -70,6 +90,16 @@ test("daily cap refuses before any provider call", async () => {
     await judgeEntry(text, null, client, { ...store(), reserve: async () => null }),
   ).toBeNull();
   expect(client.judge).not.toHaveBeenCalled();
+});
+
+test("provider failure is logged server-side and still finishes the call log", async () => {
+  const error = new Error("provider unavailable");
+  const logger = vi.spyOn(console, "error").mockImplementation(() => {});
+  const log = store();
+  const client = { judge: vi.fn().mockRejectedValue(error) };
+  expect(await judgeEntry(text, null, client, log)).toBeNull();
+  expect(logger).toHaveBeenCalledWith("Jev check failed", error);
+  expect(log.finish).toHaveBeenCalledWith("call", null, expect.any(Number));
 });
 test("Jev cannot write explanations or corrected text into its note or log", async () => {
   const raw = { ...result(), explanation: "Untrusted prose", corrected_text: "Do this" };

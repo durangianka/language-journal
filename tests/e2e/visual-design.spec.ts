@@ -1,4 +1,4 @@
-﻿import { randomUUID } from "node:crypto";
+import { randomUUID } from "node:crypto";
 import postgres from "postgres";
 import { expect, test, type Page } from "@playwright/test";
 import { dictionaries } from "../../src/i18n/dictionaries";
@@ -106,7 +106,9 @@ for (const width of [375, 1280]) {
       }
       await page.getByLabel("Your entry", { exact: true }).fill(original);
       await page.getByRole("button", { name: "Entry date", exact: true }).focus();
-      await expect(page.locator("#jev-note")).toHaveText("Grammar. Get feedback gives the detail.");
+      await expect(page.locator("#jev-note")).toHaveText(
+        "Possible grammar issue. Get feedback to see the fix.",
+      );
       await capture("writing-jev");
       page.once("dialog", (dialog) => dialog.accept());
       await page.getByRole("link", { name: "Back to journal", exact: true }).click();
