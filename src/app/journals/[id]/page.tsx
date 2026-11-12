@@ -7,6 +7,9 @@ import { buttonVariants } from "@/components/ui/button";
 import { getDictionary, getLocale } from "@/i18n/server";
 import { idSchema } from "@/lib/journal/schemas";
 
+// Allow initial analysis, one retry and one repair, each with a 20 second timeout.
+export const maxDuration = 90;
+
 export default async function JournalPage({
   params,
   searchParams,
