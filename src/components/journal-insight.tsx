@@ -24,6 +24,7 @@ export async function JournalInsight({
     getTodayInsight(id, locale),
   ]);
   if (!journal) notFound();
+  const total = counts.reduce((sum, { count }) => sum + count, 0);
   const top = counts
     .filter((c) => c.count > 0)
     .sort((a, b) => b.count - a.count || a.category.localeCompare(b.category))
@@ -37,22 +38,28 @@ export async function JournalInsight({
         </h2>
       </CardHeader>
       <CardContent className="flex flex-col gap-4">
+        <h3 className="font-medium">{t.insightCountsHeading}</h3>
+        <p className="text-sm text-muted-foreground">{t.insightCountsScope}</p>
         {top.length ? (
           <>
-            <ul className="flex flex-wrap gap-x-5 gap-y-2">
+            <ul className="flex flex-col gap-2">
               {top.map(({ category, count }) => (
                 <li key={category}>
-                  {t[category]}: {count}
+                  {t[category]}:{" "}
+                  {t[count === 1 ? "insightCorrection" : "insightCorrections"].replace(
+                    "{count}",
+                    String(count),
+                  )}
                 </li>
               ))}
             </ul>
-            <p className="text-sm text-muted-foreground">
-              {t.insightTopCategory.replace("{category}", t[top[0].category])}
-            </p>
           </>
-        ) : (
-          <p className="text-sm text-muted-foreground">{t.insightNoMistakes}</p>
-        )}
+        ) : null}
+        <p className="text-sm text-muted-foreground">
+          {total >= 5 && top.length
+            ? t.insightTopCategory.replace("{category}", t[top[0].category])
+            : t.insightNoMistakes.replace("{count}", String(total))}
+        </p>
         <JournalSummary journalId={id} initialSummary={summary} t={t} key={locale} />
       </CardContent>
     </Card>

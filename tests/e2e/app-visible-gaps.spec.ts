@@ -91,7 +91,7 @@ for (const width of [375, 1280]) {
         await expect(page).toHaveURL(/\/journals\/[a-f0-9-]+$/);
         journalId = new URL(page.url()).pathname.split("/")[2];
         await expect(page.getByLabel("Journal insight", { exact: true })).toContainText(
-          "Your insight appears after your first feedback.",
+          "Your insight appears after 5 corrections (0 of 5).",
         );
         await page.screenshot({
           path: `${screenshotDirectory}/insight-empty-${width}.png`,
@@ -198,7 +198,10 @@ for (const width of [375, 1280]) {
         ).toBeVisible();
         await page.getByRole("link", { name: "Back to journal", exact: true }).click();
         await expect(page.getByLabel("Journal insight", { exact: true })).toContainText(
-          "Grammar: 3",
+          "Grammar: 3 corrections",
+        );
+        await expect(page.getByLabel("Journal insight", { exact: true })).toContainText(
+          "Your insight appears after 5 corrections (3 of 5).",
         );
         await page.screenshot({
           path: `${screenshotDirectory}/insight-after-feedback-${width}.png`,

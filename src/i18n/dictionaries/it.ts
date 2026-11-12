@@ -55,7 +55,12 @@ export const it = {
   jevDetails: "Ottieni feedback mostra i dettagli.",
   journalInsight: "Analisi del diario",
   insightTopCategory: "La maggior parte degli errori in questo diario riguarda: {category}.",
-  insightNoMistakes: "La tua analisi appare dopo il primo feedback.",
+  insightNoMistakes: "La tua analisi appare dopo 5 correzioni ({count} di 5).",
+  insightCountsHeading: "Errori finora in questo diario",
+  insightCountsScope:
+    "I conteggi includono tutti i feedback pronti di questo diario. Le voci eliminate sono escluse.",
+  insightCorrection: "{count} correzione",
+  insightCorrections: "{count} correzioni",
   summariseJournal: "Riassumi questo diario",
   insightDailyLimit:
     "Un riepilogo per diario al giorno, entro il limite giornaliero del modello. Riprova domani.",

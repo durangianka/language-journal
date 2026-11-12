@@ -55,7 +55,12 @@ export const es = {
   jevDetails: "Obtener comentarios muestra los detalles.",
   journalInsight: "Análisis del diario",
   insightTopCategory: "La mayoría de los errores de este diario son de {category}.",
-  insightNoMistakes: "Tu análisis aparece después de tus primeros comentarios.",
+  insightNoMistakes: "Tu análisis aparece después de 5 correcciones ({count} de 5).",
+  insightCountsHeading: "Errores hasta ahora en este diario",
+  insightCountsScope:
+    "Los recuentos incluyen todos los comentarios listos de este diario. No se incluyen las entradas eliminadas.",
+  insightCorrection: "{count} corrección",
+  insightCorrections: "{count} correcciones",
   summariseJournal: "Resumir este diario",
   insightDailyLimit:
     "Un resumen por diario al día, dentro del límite diario del modelo. Vuelve mañana.",

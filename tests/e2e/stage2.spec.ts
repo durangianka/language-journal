@@ -4,6 +4,30 @@ import { expect, test } from "@playwright/test";
 import { testDatabaseUrl } from "../support/test-database-url";
 
 test.use({ viewport: { width: 375, height: 812 }, isMobile: true, hasTouch: true });
+
+test("three corrections show the waiting insight at 375px", async ({ page }) => {
+  const journalId = randomUUID();
+  const sql = postgres(testDatabaseUrl());
+  try {
+    await sql`insert into journals (id, language, level) values (${journalId}, 'en', 'basic')`;
+    await sql`insert into journal_mistake_counts (journal_id, category, count)
+      values (${journalId}, 'grammar', 2), (${journalId}, 'spelling', 1)`;
+    await page.goto(`/journals/${journalId}`);
+    const card = page.getByLabel("Journal insight", { exact: true });
+    await expect(card).toContainText("Mistakes so far in this journal");
+    await expect(card).toContainText("Grammar: 2 corrections");
+    await expect(card).toContainText("Spelling: 1 correction");
+    await expect(card).toContainText("Your insight appears after 5 corrections (3 of 5).");
+    await expect(card).not.toContainText("Most of your mistakes");
+    await expect(card.getByRole("button", { name: "Summarise this journal" })).toBeVisible();
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(
+      true,
+    );
+  } finally {
+    await sql`delete from journals where id = ${journalId}`;
+    await sql.end();
+  }
+});
 test("blur shows a Jev note without an LLM call, saving works, insight displays counts and summarises", async ({
   page,
 }) => {
@@ -27,8 +51,9 @@ test("blur shows a Jev note without an LLM call, saving works, insight displays 
     await expect(page.getByRole("status")).toHaveText("Your feedback is ready.");
     await page.getByRole("link", { name: "Back to journal", exact: true }).click();
     const card = page.getByLabel("Journal insight", { exact: true });
-    await expect(card).toContainText("Grammar: 1");
-    await expect(card).toContainText("Most of your mistakes this journal are Grammar.");
+    await expect(card).toContainText("Grammar: 1 correction");
+    await expect(card).toContainText("Your insight appears after 5 corrections (1 of 5).");
+    await expect(card).not.toContainText("Most of your mistakes");
     await card.getByRole("button", { name: "Summarise this journal" }).click();
     await expect(card).toContainText("Practise verb agreement in your next entry.");
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(
