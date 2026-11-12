@@ -1,31 +1,17 @@
-import Link from "next/link";
-import { formatDate } from "@/components/journal-layout";
-import { languageLabelKeys } from "@/config/domain";
+import { JournalsOverview } from "@/components/journals-overview";
 import type { Dictionary, Locale } from "@/i18n/types";
-import { listJournals } from "@/lib/journal";
+import { listEntries, listJournals } from "@/lib/journal";
 
 export async function JournalsList({ t, locale }: { t: Dictionary; locale: Locale }) {
   const journals = await listJournals();
-
-  return journals.length === 0 ? (
-    <p className="rounded-xl border p-5 text-muted-foreground">{t.emptyJournals}</p>
-  ) : (
-    <ul className="flex flex-col gap-3">
-      {journals.map((journal) => (
-        <li key={journal.id}>
-          <Link
-            href={`/journals/${journal.id}`}
-            className="flex min-h-11 flex-col gap-2 rounded-xl border p-5 hover:bg-muted focus-visible:outline-2"
-          >
-            <span className="font-semibold">{t[languageLabelKeys[journal.language]]}</span>
-            <span className="text-sm">{t[journal.level]}</span>
-            <time dateTime={journal.createdAt} className="text-sm text-muted-foreground">
-              {formatDate(journal.createdAt, locale)}
-            </time>
-          </Link>
-        </li>
-      ))}
-    </ul>
+  const groups = await Promise.all(journals.map((journal) => listEntries(journal.id)));
+  return (
+    <JournalsOverview
+      journals={journals}
+      entries={groups.flat().map((entry) => ({ ...entry, latestFeedback: null }))}
+      t={t}
+      locale={locale}
+    />
   );
 }
 
