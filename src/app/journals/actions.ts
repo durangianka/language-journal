@@ -1,7 +1,10 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { createEntry, createJournal, getJournal } from "../../lib/journal";
+import { createEntry, createJournal, getJournal, updateEntry } from "../../lib/journal";
+import { idSchema } from "../../lib/journal/schemas";
+import { getLocale } from "../../i18n/server";
+import { requestFeedback } from "./feedback-actions";
 import { JournalFullError } from "../../lib/journal/errors";
 import {
   mapIssues,
@@ -30,11 +33,32 @@ export async function createEntryAction(form: FormData): Promise<ActionResult> {
       return { success: false, errors: { journalId: "invalidJournal" } };
     }
     const entry = await createEntry(parsed.data);
+    // Saving succeeds even when feedback is unavailable or its daily cap is reached.
+    try {
+      await requestFeedback(entry.id, await getLocale());
+    } catch {
+      // The persisted entry remains available for a manual retry.
+    }
     revalidatePath(`/journals/${entry.journalId}`);
     return { success: true, id: entry.id };
   } catch (error) {
     if (error instanceof JournalFullError)
       return { success: false, errors: { form: "journalFull" } };
+    return { success: false, errors: { form: "saveFailed" } };
+  }
+}
+
+export async function updateEntryAction(form: FormData): Promise<ActionResult> {
+  const parsed = parseEntryForm(form);
+  if (!parsed.success) return mapIssues(parsed.error.issues);
+  const id = idSchema.safeParse(form.get("entryId"));
+  if (!id.success) return { success: false, errors: { form: "saveFailed" } };
+  try {
+    const entry = await updateEntry(id.data, parsed.data);
+    if (!entry) return { success: false, errors: { form: "saveFailed" } };
+    revalidatePath(`/journals/${entry.journalId}`, "layout");
+    return { success: true, id: entry.id };
+  } catch {
     return { success: false, errors: { form: "saveFailed" } };
   }
 }

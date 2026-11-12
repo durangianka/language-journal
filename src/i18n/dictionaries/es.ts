@@ -14,7 +14,7 @@ export const es = {
   jevDetails: "Obtener comentarios muestra los detalles.",
   journalInsight: "Análisis del diario",
   insightTopCategory: "La mayoría de los errores de este diario son de {category}.",
-  insightNoMistakes: "Todavía no hay errores registrados.",
+  insightNoMistakes: "Tu análisis aparece después de tus primeros comentarios.",
   summariseJournal: "Resumir este diario",
   insightDailyLimit:
     "Un resumen por diario al día, dentro del límite diario del modelo. Vuelve mañana.",
@@ -24,6 +24,10 @@ export const es = {
 
   feedbackHeading: "Comentarios",
   getFeedback: "Obtener comentarios",
+  getFeedbackAgain: "Obtener comentarios de nuevo",
+  feedbackOutdated:
+    "Tu texto ha cambiado. Obtén comentarios de nuevo para revisar los cambios guardados.",
+  editEntry: "Editar",
   feedbackNoFeedback: "Aún no hay comentarios. Solicita comentarios sobre tu texto guardado.",
   feedbackPending: "Preparando tus comentarios…",
   feedbackReady: "Tus comentarios están listos.",

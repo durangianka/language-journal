@@ -4,12 +4,21 @@ vi.mock("../../src/lib/journal", () => ({
   createJournal: vi.fn(),
   createEntry: vi.fn(),
   getJournal: vi.fn(),
+  updateEntry: vi.fn(),
 }));
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
+vi.mock("../../src/i18n/server", () => ({ getLocale: vi.fn(async () => "en") }));
+vi.mock("../../src/app/journals/feedback-actions", () => ({ requestFeedback: vi.fn() }));
 
 import { revalidatePath } from "next/cache";
-import { createEntryAction, createJournalAction } from "../../src/app/journals/actions";
-import { createEntry, createJournal, getJournal } from "../../src/lib/journal";
+import {
+  createEntryAction,
+  createJournalAction,
+  updateEntryAction,
+} from "../../src/app/journals/actions";
+import { createEntry, createJournal, getJournal, updateEntry } from "../../src/lib/journal";
+import { requestFeedback } from "../../src/app/journals/feedback-actions";
+import { getLocale } from "../../src/i18n/server";
 import { dictionaries } from "../../src/i18n/dictionaries";
 import { JournalFullError } from "../../src/lib/journal/errors";
 import type { ErrorKey, Field } from "../../src/lib/journal/action-input";
@@ -38,7 +47,10 @@ function form(values: Record<string, string | string[]>): FormData {
   return data;
 }
 
-beforeEach(() => vi.resetAllMocks());
+beforeEach(() => {
+  vi.resetAllMocks();
+  vi.mocked(getLocale).mockResolvedValue("en");
+});
 
 test("journal cap is a clear localized hard stop in the server action", async () => {
   vi.mocked(getJournal).mockResolvedValue(journal);
@@ -223,10 +235,54 @@ test("entry success returns the entry id and database failures map to form error
   });
   expect(await createEntryAction(form(values))).toEqual({ success: true, id });
   expect(createEntry).toHaveBeenCalledWith(values);
+  expect(requestFeedback).toHaveBeenCalledExactlyOnceWith(id, "en");
   expect(revalidatePath).toHaveBeenCalledWith(`/journals/${id}`);
   vi.mocked(createEntry).mockRejectedValue(new Error("Database unavailable"));
   expect(await createEntryAction(form(values))).toEqual({
     success: false,
     errors: { form: "saveFailed" },
   });
+});
+
+test("automatic feedback failure cannot turn a persisted save into an error", async () => {
+  vi.mocked(getJournal).mockResolvedValue(journal);
+  const values = { journalId: id, body: "I write.", entryDate: "2026-11-12" };
+  vi.mocked(createEntry).mockResolvedValue({
+    ...values,
+    id,
+    createdAt: journal.createdAt,
+    updatedAt: journal.createdAt,
+    latestFeedback: null,
+  });
+  vi.mocked(getLocale).mockResolvedValue("it");
+  vi.mocked(requestFeedback).mockRejectedValue(new Error("Unavailable"));
+  expect(await createEntryAction(form(values))).toEqual({ success: true, id });
+  expect(requestFeedback).toHaveBeenCalledExactlyOnceWith(id, "it");
+});
+
+test("editing validates the same fields, keeps the entry ID and never starts feedback", async () => {
+  const values = { journalId: id, body: "Updated writing.", entryDate: "2026-11-09" };
+  vi.mocked(updateEntry).mockResolvedValue({
+    ...values,
+    id,
+    createdAt: journal.createdAt,
+    updatedAt: journal.createdAt,
+    latestFeedback: null,
+  });
+  expect(await updateEntryAction(form({ ...values, entryId: id }))).toEqual({ success: true, id });
+  expect(updateEntry).toHaveBeenCalledExactlyOnceWith(id, values);
+  expect(requestFeedback).not.toHaveBeenCalled();
+  expect(revalidatePath).toHaveBeenCalledWith(`/journals/${id}`, "layout");
+  vi.mocked(updateEntry).mockClear();
+  for (const data of [
+    { ...values, entryId: "invalid" },
+    { ...values, entryId: id, body: " " },
+  ]) {
+    expect((await updateEntryAction(form(data))).success).toBe(false);
+  }
+  expect(updateEntry).not.toHaveBeenCalled();
+  vi.mocked(updateEntry).mockResolvedValue(null);
+  expect((await updateEntryAction(form({ ...values, entryId: id }))).success).toBe(false);
+  vi.mocked(updateEntry).mockRejectedValue(new Error("Unavailable"));
+  expect((await updateEntryAction(form({ ...values, entryId: id }))).success).toBe(false);
 });

@@ -3,6 +3,9 @@ import { JournalLayout } from "@/components/journal-layout";
 import { NewEntryBackLink, NewEntryForm, NewEntryFormSkeleton } from "@/components/new-entry-form";
 import { getDictionary } from "@/i18n/server";
 
+// First-save feedback runs after the response, within this route's duration.
+export const maxDuration = 90;
+
 export default async function NewEntryPage({ params }: { params: Promise<{ id: string }> }) {
   const t = await getDictionary();
   return (

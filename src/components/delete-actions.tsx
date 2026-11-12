@@ -31,12 +31,14 @@ export function DeleteActions({
   date,
   returnTo,
   t,
+  onEdit,
 }: {
   id: string;
   kind: "entry" | "journal";
   date?: string;
   returnTo: string;
   t: Dictionary;
+  onEdit?: () => void;
 }) {
   const router = useRouter();
   const menuTrigger = useRef<HTMLButtonElement>(null);
@@ -104,6 +106,11 @@ export function DeleteActions({
         </DropdownMenuTrigger>
         <DropdownMenuContent>
           <DropdownMenuGroup>
+            {onEdit && (
+              <DropdownMenuItem className="min-h-11" disabled={busy} onClick={onEdit}>
+                {t.editEntry}
+              </DropdownMenuItem>
+            )}
             <DropdownMenuItem
               className="min-h-11"
               disabled={busy}

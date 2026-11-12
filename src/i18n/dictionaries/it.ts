@@ -14,7 +14,7 @@ export const it = {
   jevDetails: "Ottieni feedback mostra i dettagli.",
   journalInsight: "Analisi del diario",
   insightTopCategory: "La maggior parte degli errori in questo diario riguarda: {category}.",
-  insightNoMistakes: "Nessun errore registrato finora.",
+  insightNoMistakes: "La tua analisi appare dopo il primo feedback.",
   summariseJournal: "Riassumi questo diario",
   insightDailyLimit:
     "Un riepilogo per diario al giorno, entro il limite giornaliero del modello. Riprova domani.",
@@ -24,6 +24,10 @@ export const it = {
 
   feedbackHeading: "Feedback",
   getFeedback: "Ricevi feedback",
+  getFeedbackAgain: "Ricevi di nuovo il feedback",
+  feedbackOutdated:
+    "Il tuo testo è cambiato. Richiedi di nuovo il feedback per rivedere le modifiche salvate.",
+  editEntry: "Modifica",
   feedbackNoFeedback: "Nessun feedback. Richiedi un feedback sul testo salvato.",
   feedbackPending: "Preparazione del feedback…",
   feedbackReady: "Il feedback è pronto.",

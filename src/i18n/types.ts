@@ -25,6 +25,9 @@ export type Dictionary = {
 
   feedbackHeading: string;
   getFeedback: string;
+  getFeedbackAgain: string;
+  feedbackOutdated: string;
+  editEntry: string;
   feedbackNoFeedback: string;
   feedbackPending: string;
   feedbackReady: string;
