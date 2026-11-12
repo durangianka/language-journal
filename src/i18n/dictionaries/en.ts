@@ -27,6 +27,8 @@ export const en = {
   saveFeedbackSettings: "Save settings",
   feedbackSettingsSaved: "Settings saved.",
   invalidFeedbackSettings: "Choose one of the available options for each setting.",
+  not_language_text:
+    "This does not appear to have sentence meaning in this journal's language: it looks like bare formulas or numbers, encoded text, random letters, code or another language. Please write sentences in this journal's language. Meaningful shorthand and sentences containing formulas are welcome.",
   notifications: "Notifications",
   browseCalendar: "Browse by date",
   noEntriesOnDay: "No entries on this day.",
@@ -150,8 +152,9 @@ export const en = {
   homeDescription: "A space for your language learning journey.",
   journals: "Journals",
   journalNotFound: "Journal unavailable",
-  emptyJournals:
-    "Start a journal to practise a language. Choose New journal, then pick your language and level.",
+  emptyJournals: "Create your first language journal.",
+  lastEntry: "Last entry",
+  noEntriesYet: "No entries yet",
   chooseLanguage: "Choose a language",
   chooseLevel: "Choose your level",
   new: "New · A1",

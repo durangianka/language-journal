@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState, useEffect, useRef, useState, useSyncExternalStore } from "react";
+import { Save } from "lucide-react";
 import type { JevNote } from "@/lib/jev/contract";
 import { useRouter, useSearchParams } from "next/navigation";
 import { createEntryAction, updateEntryAction } from "@/app/journals/actions";
@@ -182,6 +183,7 @@ export function EntryForm({
           </Button>
         )}
         <Button type="submit" className="min-h-11 min-w-0 flex-1" disabled={pending || !entryDate}>
+          <Save aria-hidden="true" />
           {pending ? t.saving : t.saveEntry}
         </Button>
       </div>

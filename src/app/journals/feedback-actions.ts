@@ -7,10 +7,15 @@ import {
   FeedbackRequestError,
   feedbackStore,
   latestFeedback,
+  refuseNonLanguageFeedback,
 } from "../../lib/ai/repository";
 import { openAIProvider } from "../../lib/ai/sdk";
 import { testFeedbackProvider } from "../../lib/ai/test-provider";
 import { runFeedback } from "../../lib/ai/service";
+import { checkEntryLanguage } from "../../lib/jev/service";
+import { jevClient } from "../../lib/jev/client";
+import { testJevClient } from "../../lib/jev/test-client";
+import { jevStore } from "../../lib/jev/repository";
 import { idSchema } from "../../lib/journal/schemas";
 import { localeSchema } from "../../config/locales";
 import type { ActionResult, EntryDto, FeedbackDto, Locale } from "../../lib/feedback-contract";
@@ -33,11 +38,22 @@ export async function requestFeedback(
     const job = await beginFeedback(entryId, locale);
     revalidatePath("/journals", "layout");
     after(async () => {
-      await runFeedback(
-        job,
-        feedbackStore,
-        process.env.FEEDBACK_TEST_MODE === "1" ? testFeedbackProvider : openAIProvider,
+      // Preserve deletion privacy before sending the snapshot to Jev as well as the model.
+      if (!(await readEntry(job.entryId))) return;
+      const allowed = await checkEntryLanguage(
+        job.input.analysedText,
+        job.input.language,
+        job.entryId,
+        process.env.JEV_TEST_MODE === "1" ? testJevClient : jevClient,
+        jevStore,
       );
+      if (!allowed) await refuseNonLanguageFeedback(job);
+      else
+        await runFeedback(
+          job,
+          feedbackStore,
+          process.env.FEEDBACK_TEST_MODE === "1" ? testFeedbackProvider : openAIProvider,
+        );
       revalidatePath("/journals", "layout");
     });
     return { success: true, data: job.feedback };

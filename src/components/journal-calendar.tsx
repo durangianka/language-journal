@@ -4,7 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { format, parseISO } from "date-fns";
 import { enUS, es, it } from "react-day-picker/locale";
-import { CalendarDays, ChevronDown } from "lucide-react";
+import { CalendarDays, ChevronDown, PenLine } from "lucide-react";
 import { Calendar } from "@/components/ui/calendar";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -60,14 +60,12 @@ export function JournalCalendar({
             onSelect={(date) => {
               setSelected(date);
               if (date)
-                document
-                  .getElementById(`entries-${format(date, "yyyy-MM-dd")}`)
-                  ?.scrollIntoView({
-                    block: "start",
-                    behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches
-                      ? "instant"
-                      : "smooth",
-                  });
+                document.getElementById(`entries-${format(date, "yyyy-MM-dd")}`)?.scrollIntoView({
+                  block: "start",
+                  behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches
+                    ? "instant"
+                    : "smooth",
+                });
             }}
           />
           {selectedKey && !counts.has(selectedKey) && (
@@ -75,8 +73,9 @@ export function JournalCalendar({
               <p>{t.noEntriesOnDay}</p>
               <Link
                 href={`/journals/${journalId}/entries/new?date=${selectedKey}`}
-                className="inline-flex min-h-11 items-center underline"
+                className="inline-flex min-h-11 items-center gap-2 underline"
               >
+                <PenLine aria-hidden="true" className="size-4" />
                 {t.newEntry}
               </Link>
             </div>

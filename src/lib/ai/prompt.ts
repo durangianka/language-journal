@@ -1,5 +1,6 @@
 import type { AnalysisInput } from "./provider";
 import { verifiedShorthand } from "../../config/shorthand";
+import { verifiedShorthandExamples } from "../../config/shorthand";
 
 export const promptVersion = "feedback-v2";
 export function feedbackPrompt(input: AnalysisInput) {
@@ -22,6 +23,9 @@ At New and Basic, tolerate understandable shorthand and gently show its standard
 At Intermediate, tolerate shorthand in explicitly informal entries; suggest standard forms when helpful for accuracy or transfer. For formal tasks, suggest standard writing.
 At Advanced, flag informal shorthand or slang as a style correction when the task is formal, whatever the feedback tone. In informal journaling, tolerate purposeful, contextually apt shorthand.
 The supplied shorthand reference contains verified examples only. Resolve ambiguous forms using surrounding syntax and context, never by a single-token substitution. Digits, symbols, names and beginner spelling alone are not evidence of an error. Do not infer extra abbreviation mappings from this list.
+Meaningful shorthand, slang and abbreviations are language, not gibberish. Verified contextual examples for ${input.language}: ${verifiedShorthandExamples[input.language]} Infer expansions from grammar and context, never from a token alone. Preserve the meaning of sentences containing formulas or numbers.
+This is informal journaling by default. Adapt register to the writing task and audience, not proficiency alone. These level rules are app policy, not requirements specified by CEFR.
+${input.level === "advanced" ? "For this Advanced learner, flag informal shorthand as a style correction only when the writing task is clearly formal or requires standard writing. Otherwise tolerate purposeful, contextually appropriate shorthand in informal journaling." : input.level === "new" || input.level === "basic" ? "For this New or Basic learner, tolerate meaningful shorthand and gently show its standard form with a simple, encouraging explanation. Explain forms that obscure the target structure without rejecting understandable language." : "For this Intermediate learner, tolerate shorthand in informal entries and suggest standard spelling when it supports accuracy or transfer."}
 The corrected full text must be at most 2000 characters. If no corrections are needed, return the original text and an empty corrections array.
 If repairing, replace the invalid output using the same entry and all these rules.`,
     input: JSON.stringify({

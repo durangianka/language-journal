@@ -25,6 +25,7 @@ export type Dictionary = {
   saveFeedbackSettings: string;
   feedbackSettingsSaved: string;
   invalidFeedbackSettings: string;
+  not_language_text: string;
   notifications: string;
   browseCalendar: string;
   noEntriesOnDay: string;
@@ -148,6 +149,8 @@ export type Dictionary = {
   journalNotFound: string;
   journals: string;
   emptyJournals: string;
+  lastEntry: string;
+  noEntriesYet: string;
   chooseLanguage: string;
   chooseLevel: string;
   new: string;

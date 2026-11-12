@@ -102,6 +102,32 @@ export async function beginFeedback(
   });
 }
 
+// Only an unused reservation may be released. Never erase a metered model call.
+export async function refuseNonLanguageFeedback(job: FeedbackJob) {
+  await db.transaction(async (tx) => {
+    const [pending] = await tx
+      .select({ id: feedback.id })
+      .from(feedback)
+      .where(and(eq(feedback.id, job.id), eq(feedback.status, "pending")))
+      .for("update");
+    if (!pending) return;
+    const released = await tx
+      .delete(modelCalls)
+      .where(and(eq(modelCalls.id, job.callId), eq(modelCalls.outcome, "reserved")))
+      .returning({ id: modelCalls.id });
+    if (!released.length) return;
+    await tx
+      .update(feedback)
+      .set({
+        status: "failed",
+        reasonCode: "not_language_text",
+        attempts: 0,
+        updatedAt: new Date(),
+      })
+      .where(and(eq(feedback.id, job.id), eq(feedback.status, "pending")));
+  });
+}
+
 export const feedbackStore: FeedbackStore = {
   async claim(callId) {
     const rows = await db

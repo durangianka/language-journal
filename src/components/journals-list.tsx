@@ -2,10 +2,26 @@ import { JournalsOverview } from "@/components/journals-overview";
 import type { Dictionary, Locale } from "@/i18n/types";
 import { listEntries, listJournals } from "@/lib/journal";
 
-export async function JournalsList({ t, locale }: { t: Dictionary; locale: Locale }) {
+export async function JournalsList({
+  t,
+  locale,
+  showEntries = true,
+}: {
+  t: Dictionary;
+  locale: Locale;
+  showEntries?: boolean;
+}) {
   const journals = await listJournals();
   const groups = await Promise.all(journals.map((journal) => listEntries(journal.id)));
-  return <JournalsOverview journals={journals} entries={groups.flat()} t={t} locale={locale} />;
+  return (
+    <JournalsOverview
+      journals={journals}
+      entries={groups.flat()}
+      t={t}
+      locale={locale}
+      showEntries={showEntries}
+    />
+  );
 }
 
 export function JournalsListSkeleton({ label }: { label: string }) {

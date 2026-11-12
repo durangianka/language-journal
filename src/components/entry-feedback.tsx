@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { LoaderCircle, MessageSquare } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
@@ -87,10 +88,16 @@ export function EntryFeedback({
   }
   return (
     <section aria-labelledby="feedback-heading" className="flex flex-col gap-4">
-      <h2 id="feedback-heading" className="text-xl font-semibold">
+      <h2 id="feedback-heading" className="flex items-center gap-2 text-xl font-semibold">
+        <MessageSquare aria-hidden="true" className="size-5" />
         {t.feedbackHeading}
       </h2>
-      <div role="status" aria-live="polite" aria-atomic="true">
+      <div role="status" aria-live="polite" aria-atomic="true" className="flex items-center gap-2">
+        {status === "pending" && (
+          <span aria-hidden="true" className="inline-flex animate-spin motion-reduce:animate-none">
+            <LoaderCircle className="size-5" />
+          </span>
+        )}
         {status === "pending"
           ? t.feedbackPending
           : status === "ready"
@@ -136,9 +143,11 @@ export function EntryFeedback({
                 >
                   {feedback.correctedText}
                 </p>
+              ) : status === "pending" ? (
+                <FeedbackSkeleton label={t.correctedText} />
               ) : (
                 <p className="text-muted-foreground">
-                  {status === "pending" ? t.feedbackPending : t.feedbackNoFeedback}
+                  {status === "failed" ? t.feedbackFailed : t.feedbackNoFeedback}
                 </p>
               )}
             </CardContent>
@@ -160,6 +169,14 @@ export function EntryFeedback({
           </Card>
         </TabsContent>
       </Tabs>
+      {status === "pending" && (
+        <div>
+          <h3 className="mb-2 font-semibold">{t.correctionsHeading}</h3>
+          <div className="rounded-xl border p-4">
+            <FeedbackSkeleton label={t.correctionsHeading} />
+          </div>
+        </div>
+      )}
       {status === "ready" &&
         feedback &&
         (feedback.corrections.length === 0 ? (
@@ -200,6 +217,7 @@ export function EntryFeedback({
         disabled={status === "pending"}
         onClick={() => void request()}
       >
+        <MessageSquare aria-hidden="true" />
         {status === "pending"
           ? t.feedbackPending
           : status === "failed"
@@ -209,5 +227,24 @@ export function EntryFeedback({
               : t.getFeedback}
       </Button>
     </section>
+  );
+}
+
+function FeedbackSkeleton({ label }: { label: string }) {
+  return (
+    <div aria-label={label} aria-busy="true" className="flex flex-col gap-3">
+      <div
+        aria-hidden="true"
+        className="h-4 w-full animate-pulse rounded bg-muted motion-reduce:animate-none"
+      />
+      <div
+        aria-hidden="true"
+        className="h-4 w-4/5 animate-pulse rounded bg-muted motion-reduce:animate-none"
+      />
+      <div
+        aria-hidden="true"
+        className="h-4 w-3/5 animate-pulse rounded bg-muted motion-reduce:animate-none"
+      />
+    </div>
   );
 }

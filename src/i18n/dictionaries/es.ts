@@ -27,6 +27,8 @@ export const es = {
   saveFeedbackSettings: "Guardar ajustes",
   feedbackSettingsSaved: "Ajustes guardados.",
   invalidFeedbackSettings: "Elige una de las opciones disponibles para cada ajuste.",
+  not_language_text:
+    "Esto no parece tener significado como frase en el idioma del diario: parece contener solo fórmulas o números, texto codificado, letras al azar, código u otro idioma. Escribe frases en el idioma de este diario. Se aceptan abreviaturas con significado y frases que incluyan fórmulas.",
   notifications: "Notificaciones",
   browseCalendar: "Buscar por fecha",
   noEntriesOnDay: "No hay entradas este día.",
@@ -153,8 +155,9 @@ export const es = {
   homeDescription: "Un espacio para aprender idiomas.",
   journals: "Diarios",
   journalNotFound: "Diario no disponible",
-  emptyJournals:
-    "Crea un diario para practicar un idioma. Elige Nuevo diario y selecciona tu idioma y nivel.",
+  emptyJournals: "Crea tu primer diario de idiomas.",
+  lastEntry: "Última entrada",
+  noEntriesYet: "Aún no hay entradas",
   chooseLanguage: "Elige un idioma",
   chooseLevel: "Elige tu nivel",
   new: "Nuevo · A1",
