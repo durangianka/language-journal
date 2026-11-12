@@ -5,7 +5,7 @@ import { testDatabaseUrl } from "../support/test-database-url";
 
 test.use({ viewport: { width: 375, height: 812 }, isMobile: true, hasTouch: true });
 
-test("short Spanish spelling hint stays beside Save at 375px and retries on each blur", async ({
+test("short Spanish spelling badge stays above the text box at 375px and retries on each blur", async ({
   page,
 }) => {
   const journalId = randomUUID();
@@ -34,10 +34,10 @@ test("short Spanish spelling hint stays beside Save at 375px and retries on each
     await body.fill("Hola amgo");
     expect(calls).toBe(0);
     await save.focus();
-    await expect(hint).toHaveText("Checking your text...");
+    await expect(hint).toHaveText("Checking your text");
     await expect(save).toBeEnabled();
     release();
-    await expect(hint).toHaveText("Possible spelling issue. Get feedback to see the fix.");
+    await expect(hint).toHaveText("Possible spelling issue Get feedback to see the fix");
     expect(calls).toBe(1);
     await expect(hint).toBeInViewport();
     await expect(save).toBeInViewport();
@@ -48,18 +48,20 @@ test("short Spanish spelling hint stays beside Save at 375px and retries on each
     });
     await expect(page.locator(".writing-form")).toHaveAttribute("data-keyboard-open", "true");
     const hintBox = await hint.boundingBox();
+    const bodyBox = await body.boundingBox();
     const saveBox = await save.boundingBox();
     expect(hintBox).not.toBeNull();
+    expect(bodyBox).not.toBeNull();
     expect(saveBox).not.toBeNull();
     expect(hintBox!.y).toBeGreaterThanOrEqual(0);
-    expect(hintBox!.y + hintBox!.height).toBeLessThanOrEqual(saveBox!.y);
+    expect(hintBox!.y + hintBox!.height).toBeLessThanOrEqual(bodyBox!.y);
     expect(saveBox!.y + saveBox!.height).toBeLessThanOrEqual(400);
     await page.screenshot({ path: "test-results/jev-spelling-375-keyboard.png" });
     gate = Promise.resolve();
     note = { issue: "uncertain", confidence: 0.4 };
     await body.focus();
     await save.focus();
-    await expect(hint).toHaveText("Not sure yet. Get feedback to check.");
+    await expect(hint).toHaveText("Not sure about this one. Get feedback to check.");
     expect(calls).toBe(2);
     note = null;
     await body.focus();
@@ -110,7 +112,7 @@ test("blur shows a Jev note without an LLM call, saving works, insight displays 
       .fill("I goes to the market and buy some fresh fruit for dinner.");
     await page.locator("#entry-date").focus();
     await expect(page.locator("#jev-note")).toHaveText(
-      "Possible grammar issue. Get feedback to see the fix.",
+      "Possible grammar issue Get feedback to see the fix",
     );
     const [jev] = await sql`select count(*)::integer as count from jev_calls`;
     expect(jev.count).toBeGreaterThan(0);
