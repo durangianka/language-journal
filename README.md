@@ -150,7 +150,7 @@ Feedback quality was checked in three ways. The results are small and specific, 
 
 - **Owner review (Spanish and Italian, plus English).** The owner reads all three languages and used the app on real entries. The feedback was useful, especially for Italian and Spanish, which is why those were chosen as the main test languages.
 - **Fresh-context review.** A reviewer with no knowledge of the app ran 30 entries through the browser: ten each in English, Spanish and Italian, at Basic (A2) level. All 30 received feedback, and none failed or was refused. The reviewer rated the quality 4 out of 5 and judged it helpful for learning in part.
-- **Insight review.** The same reviewer checked the journal insight card and the summary for each journal against its entries. [Result to be added.]
+- **Insight review.** The same reviewer checked the insight card and summary for each journal against its entries. The summaries used real examples and invented nothing, but the category counts were wrong in places (for example, Spanish showed 5 grammar corrections where there were 4), and one tie was presented as a clear top category. Insights were rated 2 out of 5. The counts need fixing before the insights are relied on.
 
 What the reviews found:
 
