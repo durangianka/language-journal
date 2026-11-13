@@ -18,6 +18,8 @@
     "test:live": "vitest run --config vitest.live.config.mts",
     "test:e2e": "playwright test",
     "db:up": "docker compose up -d",
+    "setup": "node scripts/setup-local.mjs",
+    "setup:no-docker": "node scripts/setup-local.mjs --no-docker",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate"
   },
