@@ -150,9 +150,9 @@ pnpm test:e2e                          # browser tests at phone and desktop widt
 
 Feedback quality was checked in three ways. The results are small and specific, not a benchmark.
 
-- **Owner review (Spanish and Italian, plus English).** The owner reads all three languages and used the app on real entries. The feedback was useful, especially for Italian and Spanish, which is why those were chosen as the main test languages.
-- **Fresh-context review.** A reviewer with no knowledge of the app ran 30 entries through the browser: ten each in English, Spanish and Italian, at Basic (A2) level. All 30 received feedback, and none failed or was refused. The reviewer rated the quality 4 out of 5 and judged it helpful for learning in part.
-- **Insight review.** The same reviewer checked the insight card and summary for each journal against its entries. The summaries used real examples and invented nothing, but the category counts were wrong in places (for example, Spanish showed 5 grammar corrections where there were 4), and one tie was presented as a clear top category. Insights were rated 2 out of 5. The counts need fixing before the insights are relied on.
+- **Human review (the author).** The author is a native speaker of Italian and Spanish and is fluent in English. The author used the app on real entries and found the feedback useful, especially in Italian and Spanish. Those two languages were chosen as the main test languages for this reason.
+- **AI agent review.** An AI agent with no prior knowledge of the app ran 30 entries through the browser: ten each in English, Spanish and Italian, at Basic (A2) level. All 30 received feedback, and none failed or was refused. The agent rated the quality 4 out of 5 and judged it helpful for learning in part.
+- **AI agent review of insights.** The same agent checked the insight card and summary for each journal against its entries. The summaries used real examples and invented nothing. The category counts were wrong in places (for example, Spanish showed 5 grammar corrections where there were 4), and one tie was shown as a clear top category. The agent rated the insights 2 out of 5 before the fix. Both problems were then fixed: the counts use each entry's latest feedback, and ties are shown as ties.
 
 What the reviews found:
 
