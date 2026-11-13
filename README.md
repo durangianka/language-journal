@@ -33,7 +33,18 @@ pnpm db:migrate
 pnpm dev
 ```
 
-Open <http://localhost:3000>. The home page is a development placeholder.
+Both `pnpm dev` and `pnpm start` bind only to `APP_HOST`, which defaults to
+`100.66.182.87`, the owner's Tailscale address. Open <http://100.66.182.87:3000>
+on this computer or a phone connected to the same Tailscale network.
+The Tailscale interface must be available when starting with the default address.
+Set `APP_HOST=127.0.0.1` in `.env` or your shell for access only on this computer:
+
+```powershell
+$env:APP_HOST = "127.0.0.1"
+pnpm dev
+```
+
+Then open <http://127.0.0.1:3000>. Browser tests set this loopback override themselves.
 Postgres data persists in a named Docker volume. `docker compose down` stops it.
 
 ## Checks
