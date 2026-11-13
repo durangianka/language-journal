@@ -9,6 +9,7 @@ for (const scenario of ["create", "edit", "tenth entry"] as const) {
     const sql = postgres(testDatabaseUrl());
     const journalId = randomUUID();
     const entryId = randomUUID();
+    let held = false;
     let release!: () => void;
     let intercepted!: () => void;
     const reached = new Promise<void>((resolve) => {
@@ -29,17 +30,19 @@ for (const scenario of ["create", "edit", "tenth entry"] as const) {
       if (editing) await page.getByRole("button", { name: "Edit", exact: true }).click();
       const body = page.getByRole("textbox", { name: "Your entry", exact: true });
       await body.fill("Submitted writing.");
-      await page.route(
-        "**/journals/**",
-        async (route) => {
-          if (route.request().method() !== "POST" || !route.request().headers()["next-action"])
-            return route.continue();
-          intercepted();
-          await gate;
-          await route.continue();
-        },
-        { times: 1 },
-      );
+      await page.route("**/journals/**", async (route) => {
+        if (
+          held ||
+          route.request().method() !== "POST" ||
+          !route.request().headers()["next-action"]
+        )
+          return route.continue();
+        // Prefetch GETs must not consume the delayed save interception.
+        held = true;
+        intercepted();
+        await gate;
+        await route.continue();
+      });
       await page.getByRole("button", { name: "Save entry", exact: true }).click();
       await reached;
       await expect(body).toBeEditable();
