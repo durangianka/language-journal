@@ -65,8 +65,8 @@ $$;
 
 REVOKE ALL ON ALL TABLES IN SCHEMA public FROM PUBLIC, journal_app;
 GRANT SELECT, INSERT, UPDATE ON ALL TABLES IN SCHEMA public TO journal_app;
--- Hard deletion is limited to source records. Cascades remove their content;
--- model_calls retains usage through nullable foreign keys.
+-- Hard deletion is limited to source records and rebuildable derived counts.
+-- Cascades remove source content; model_calls retains usage through nullable keys.
 DO $$
 BEGIN
   IF to_regclass('public.journals') IS NOT NULL THEN
@@ -74,6 +74,9 @@ BEGIN
   END IF;
   IF to_regclass('public.entries') IS NOT NULL THEN
     GRANT DELETE ON public.entries TO journal_app;
+  END IF;
+  IF to_regclass('public.journal_mistake_counts') IS NOT NULL THEN
+    GRANT DELETE ON public.journal_mistake_counts TO journal_app;
   END IF;
 END
 $$;
