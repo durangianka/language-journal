@@ -1,268 +1,149 @@
 # Language Journal
 
-Language Journal helps one learner practise English, Spanish or Italian with short written entries and explained corrections.
-Stage 1 is the write, get feedback, save and review loop: the app saves writing first, then offers a corrected version and up to three corrections.
-The implementation also includes editing, a calendar, trash and restore, interface languages, feedback preferences, and a Stage 2 slice with recurring-category counts, journal summaries and a Jev pilot.
+A personal writing journal for learning English, Spanish or Italian. You write a short entry, get a corrected version with up to three explained corrections, and reopen the entry later. Built as a single-user, local-first app in Next.js, Postgres and the OpenAI API.
 
-This is a local, single-user application with no login. Do not expose it publicly or add a second user before adding authentication and ownership checks (D-029).
-For a ten-minute review, read this page, then the [documentation index](docs/README.md) and [decisions log](DECISIONS.md).
-This handover describes `origin/main` at `9e8c412`, checked on 13 November 2026.
+Status: working locally for one learner. It has no login and is not meant for public deployment (see [Limits](#limits)).
 
-## Run locally
+## Quick start
 
-Prerequisites: Node.js 24 or newer, pnpm 11.6.0 as pinned in `package.json`, and Docker with Compose running Linux containers.
-From the repository root:
+You need Docker (Docker Desktop on Windows and macOS, Docker Engine with Compose on Linux) and an OpenAI API key. A TypeSafe Jev key is optional and enables the language check.
 
-```sh
-pnpm install --frozen-lockfile
-```
+**1. Create your settings file**
 
-Copy `.env.example` to `.env`. In PowerShell:
+PowerShell (Windows):
 
 ```powershell
 Copy-Item .env.example .env
 ```
 
-Use the example's local database settings. If you change `POSTGRES_USER`, `POSTGRES_PASSWORD` or `POSTGRES_DB`, update `DATABASE_URL` and `TEST_DATABASE_URL` too.
-Keep the test database separate, normally `journal_test`.
-Set `OPENAI_API_KEY` for real feedback and summaries, and `JEV_API_KEY` for real Jev checks. Both keys stay on the server.
-With blank keys, writing can still be saved; model feedback fails and Jev checks are unavailable.
+macOS, Linux or Git Bash:
 
 ```sh
-pnpm db:up
-docker compose exec db pg_isready -U journal -d journal
-pnpm db:migrate
+cp .env.example .env
+```
+
+**2. Add your keys to `.env`**
+
+| Variable            | Needed for                     | Notes                                                                 |
+| ------------------- | ------------------------------ | --------------------------------------------------------------------- |
+| `OPENAI_API_KEY`    | Feedback and journal summaries | Without it, saving still works and feedback reports a provider error. |
+| `JEV_API_KEY`       | Language check while writing   | Optional. Without it, checks are skipped.                             |
+| `POSTGRES_PASSWORD` | Local database password        | Change it from the example value if this machine is shared.           |
+
+Keys are read on the server only. They never reach the browser.
+
+**3. Start everything**
+
+```sh
+docker compose up --build
+```
+
+Open <http://127.0.0.1:3000>. Migrations run automatically on start. Data stays in a Docker volume, so `docker compose down` keeps it.
+
+### Without Docker for the app
+
+Docker still runs the database. The app runs on your machine.
+
+Requirements: Node.js 24 or newer, and pnpm 11.6.0 (`corepack enable` activates the pinned version).
+
+```sh
+pnpm setup
 pnpm dev
 ```
 
-The readiness command assumes the example credentials. Wait for Postgres to accept connections before migrating.
-Compose runs Postgres 17 on IPv4 loopback port 5433, avoiding a native Postgres on 5432.
-Data persists in the `journal_data` volume. `docker compose down` stops the container without deleting that volume.
-Changing credentials does not reconfigure an existing database volume.
+`pnpm setup` creates `.env` if it is missing, starts the database, waits for it, installs packages and applies migrations. It never overwrites an existing `.env` and never prints key values.
 
-Both `pnpm dev` and `pnpm start` bind only to `APP_HOST`, which defaults to
-`100.66.182.87`, the owner's Tailscale address. Open <http://100.66.182.87:3000>
-on this computer or a phone connected to the same Tailscale network.
-The Tailscale interface must be available when starting with the default address.
-Set `APP_HOST=127.0.0.1` in `.env` or your shell for access only on this computer:
+### Using the app from a phone
+
+By default the app listens on `127.0.0.1` only. To open it from a phone on your Tailscale network, set `APP_HOST` to this computer's Tailscale address, then open `http://<that-address>:3000` on the phone.
+
+PowerShell:
 
 ```powershell
-$env:APP_HOST = "127.0.0.1"
+$env:APP_HOST = "100.x.y.z"
 pnpm dev
 ```
 
-Then open <http://127.0.0.1:3000>. Browser tests set this loopback override themselves.
-The launcher loads `.env` and passes the selected address to Next.js `--hostname`.
-Use `APP_HOST` to change the address; the launcher rejects hostname CLI overrides.
+## Architecture
 
-The one-command setup script is planned and has not been built. `scripts/with-test-database.mjs` is a test command wrapper, not a setup script.
-Schema changes use `pnpm db:generate` to create reviewable SQL in `drizzle/`, followed by `pnpm db:migrate`.
-Migration `0003` refuses to lower the old entry length limit if existing entries exceed 2,000 characters. It does not truncate writing.
-Migration `0007_cancel_unused_model_reservations` adds the `cancelled` model-call outcome and grants an existing `journal_app` role DELETE on rebuildable `journal_mistake_counts`.
-Run all committed migrations before starting an existing installation with this revision.
+```mermaid
+flowchart LR
+  browser[Browser<br/>phone or desktop] --> app[Next.js app<br/>pages, Server Actions]
+  app --> data[Server-only data layer<br/>validation, limits, transactions]
+  data --> db[(Postgres 17)]
+  data --> openai[OpenAI<br/>feedback and summaries]
+  data --> jev[TypeSafe Jev<br/>language check]
+```
 
-## Architecture and request boundaries
+- **Next.js 16 (App Router)** renders the pages. Forms call Server Actions, which validate input and call the data layer. One route handler, `POST /api/jev`, serves the live language check.
+- **Postgres 17 with Drizzle ORM.** Schema in `src/db/schema.ts`, reviewable SQL migrations in `drizzle/`.
+- **Feedback** uses OpenAI `gpt-6-luna` through the Vercel AI SDK with structured JSON output. Every response is validated with Zod before it is saved: JSON shape, exact quoted spans, category values, and the language of the explanations (checked with `eld`).
+- **Jev (TypeSafe)** judges whether text is real language before it reaches the feedback model, and gives a quick main-issue check while typing.
+- **UI:** Tailwind CSS and shadcn/ui, designed mobile first.
 
-This is a layered Next.js App Router application, with a port and adapter for AI. It is not full hexagonal architecture or full domain-driven design.
-There are no separate domain aggregates or independent backend service.
+## Key decisions and trade-offs
 
-| Layer                      | Responsibility and source                                                                                                                            |
-| -------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Pages and components       | `src/app/` renders routes; `src/components/` contains forms, review screens and feedback UI. Server rendering and Suspense wrap client interactions. |
-| Server Actions             | `src/app/journals/*actions.ts`, settings and locale actions handle browser requests, validate input, call services and refresh affected UI.          |
-| Server-only data functions | `src/lib/journal/`, AI and insight repositories perform reads, writes, transactions, caps and deletion checks. They return small DTOs to the UI.     |
-| AI port and adapter        | `FeedbackProvider` and `FeedbackStore` in `src/lib/ai/` let the feedback service use the OpenAI SDK adapter or test fakes.                           |
-| Jev adapter                | `src/lib/jev/` defines questions, validates answers, calls the decision API and records usage.                                                       |
-| Database                   | `src/db/schema.ts`, the postgres.js client and committed Drizzle SQL migrations define Postgres storage.                                             |
+The full reasoning is in [DECISIONS.md](DECISIONS.md).
 
-A framework **Server Function** uses `"use server"`. A **Server Action** is a Server Function used for an action or mutation.
-These functions are reachable through direct POST requests, even without clicking a rendered button. Each boundary must validate input and, once authentication exists, verify the caller's identity and ownership on every invocation.
-Today actions validate form fields, IDs, locales and applicable resource relationships, directly or through the data layer. They do **not** authenticate a person or establish ownership. A valid UUID is not an identity check.
+| Decision                                       | Why                                               | Trade-off                                                       |
+| ---------------------------------------------- | ------------------------------------------------- | --------------------------------------------------------------- |
+| One Next.js app, not a separate API and SPA    | One deployable unit, one language, less glue code | Not a pure single-page app                                      |
+| Save the entry before any AI call              | Writing is never lost if the model fails          | Some entries have no feedback yet                               |
+| Structured output, no tool loop                | Output is testable and validated before saving    | The model cannot look up past entries                           |
+| Validate every model output before saving      | Bad or unsafe output never reaches the learner    | Validation checks format and quoting, not teaching quality      |
+| Hard caps on entries, requests and daily calls | Predictable cost, bounded work                    | Heavy use is blocked by design                                  |
+| Small model (`gpt-6-luna`)                     | Bounded task, low cost per entry                  | Less capable on long or complex text                            |
+| No login                                       | Scope: one learner on one machine                 | Not safe for public or multi-user use                           |
+| Soft delete, with category counts kept         | Mistake patterns survive deletion                 | Trashed entries still use their slots until permanently deleted |
+| Language check fails open                      | Writing is never blocked by a third-party outage  | It is a best-effort filter, not a guarantee                     |
 
-An ordinary function in a module importing `server-only`, such as `createEntry` in `src/lib/journal/index.ts`, runs inside the server and does not itself create an HTTP endpoint.
-It may still be exposed through a calling action. Pages also call these data functions directly for reads.
-The one explicit API route is `POST /api/jev` in `src/app/api/jev/route.ts`. It requires Origin to match Host, returning 403 for missing or mismatched origins, and limits the streamed body to 20,000 bytes, returning 413 when exceeded.
-It validates its JSON and journal/entry relationship, and returns a judgement or `null`.
-It has no user authentication either. There is no separate REST API for journal CRUD.
-Private-interface binding and origin checks limit exposure but do not establish identity. Jev failure logs contain fixed event codes and status values rather than provider errors or learner text.
+## Data and limits
 
-This boundary guidance was checked against the bundled Next.js 16.4.6 docs and [Next.js data security guidance](https://nextjs.org/docs/app/guides/data-security).
+| Limit                       | Value                   | Why                                        |
+| --------------------------- | ----------------------- | ------------------------------------------ |
+| Entry length                | 2,000 characters        | Keeps each analysis request small          |
+| Feedback requests per entry | 3                       | Stops repeated retries becoming a habit    |
+| Corrections per feedback    | 3                       | A set the learner can act on               |
+| Entries per journal         | 10                      | Keeps each journal reviewable              |
+| Model calls per day         | 50 (London day, shared) | Cost brake, covering retries and summaries |
+| Language checks per day     | 200                     | Same reason, for Jev                       |
 
-## Data model and limits
+Entries, feedback, usage counts and summaries are stored in Postgres. Deleting an entry is soft by default, and a separate action removes it permanently.
 
-The [schema](src/db/schema.ts) and [migrations](drizzle/) define eight app tables. There is no users table.
-
-| Table                    | Purpose                                                                                                                                             |
-| ------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `journals`               | Target language, level, ordered focus choices, creation time and soft-delete marker.                                                                |
-| `entries`                | Original writing, journal ID, calendar date, timestamps and soft-delete marker.                                                                     |
-| `feedback`               | Analysed text snapshot, interface locale, pending/ready/failed state, reason, corrected text, corrections, model, prompt version and attempt count. |
-| `model_calls`            | Shared model-call ledger for analysis, retry, repair and insight, with outcomes, duration and available token counts.                               |
-| `journal_mistake_counts` | Materialised category totals per journal, recomputed from all ready feedback on visible entries.                                                    |
-| `jev_calls`              | Questions, answers, confidence and duration for Jev reservations and checks.                                                                        |
-| `journal_insights`       | Summary and call reference, limited by a unique journal/day pair, with its generation locale.                                                       |
-| `feedback_settings`      | One learner's tone, address and optional gender preference, constrained to singleton ID 1. Defaults are formal, neutral and unspecified.            |
-
-The [shared contract](src/lib/feedback-contract.ts) caps entries at **2,000 Unicode code points**, **10 stored entries per journal**, **3 feedback requests per entry**, **3 corrections per feedback**, and **50 model calls per day**.
-An explanation has at most 200 code points. Focus is optional: New allows one choice, Basic two, Intermediate and Advanced three.
-The entry length and focus limits also have database constraints. Entry-count and call reservations use transactions and locks in the data layer.
-Soft-deleted entries still occupy slots in both the form and server checks; permanent deletion frees their slots. Feedback failures occupy feedback request slots, except Jev language refusals made before a model attempt.
-
-Soft deletion marks journals and entries with `deleted_at` and hides them from normal reads. Trash can restore them.
-Restoring a journal restores its deletion batch while preserving entries trashed earlier. An entry cannot be restored while its journal is deleted.
-Hard deletion cascades to feedback, insights and category counts. Model and Jev call rows survive with nullable source references, so deletion does not reset usage limits.
-The daily model budget uses the Europe/London calendar day and includes summaries, retry/repair calls and reservations, excluding cancelled unused reservations.
-See [database roles](docs/database-roles.md) for optional separate app and migration roles. Normal Compose setup does not provision or adopt them automatically.
-Current app grants allow SELECT/INSERT/UPDATE on app tables and DELETE on journals, entries and rebuildable mistake counts. Direct DELETE on model-call history remains denied; unused reservations are cancelled in place.
-
-## Feedback and Jev
-
-`createEntryAction` saves first, then requests feedback. Failure to start feedback does not roll back the saved entry.
-Later edits save without requesting new feedback. The learner can request feedback or retry from the entry view, within the same three-request cap.
-Feedback keeps the text snapshot it analysed; editing does not rewrite old feedback.
-
-The [feedback service](src/lib/ai/service.ts) uses OpenAI `gpt-6-luna` through the AI SDK Responses adapter and structured JSON output.
-The prompt includes target language, level, ordered focus, interface locale and feedback preferences. Entry text is treated as untrusted data.
-The prompt asks for corrected text in the target language and explanations in the selected English, Spanish or Italian interface locale.
-Tone, address and gender preferences steer explanation wording. They are not intended to change which corrections are needed.
-
-The [output validator](src/lib/ai/schema.ts) checks JSON, a strict Zod object, size and category limits, nonempty single-line explanations, exact original spans, and reliably detected explanation language using `eld`.
-Corrected text must be nonblank, each nonempty fix must appear in it, and zero corrections require corrected text to equal the analysed text. Empty fixes represent deletions.
-These checks do not prove pedagogical correctness. The SDK adapter requests `store: false`; this flag alone does not establish the provider's complete retention policy.
-
-There is a 20-second generation timeout and a 4,096-output-token budget per model call, at most one SDK retry and one validation repair, with at most three metered calls per feedback request.
-Each extra call needs a daily-budget reservation. Token counts are recorded when available; failures can have null counts.
-Work runs after the action response through Next.js `after`, and the entry screen polls the persisted state.
-
-Pending feedback has a persisted two-minute deadline. The next read, request or completion marks expired work failed, including after a server restart, while retaining metered usage and the existing retry caps. The latest successful feedback and its analysed writing snapshot stay visible alongside a later failed attempt.
-
-| State or reason       | Meaning                                                         |
-| --------------------- | --------------------------------------------------------------- |
-| No feedback           | No stored feedback record is available.                         |
-| `pending`             | A feedback request was persisted and work has been scheduled.   |
-| `ready`               | Output passed the app's checks and was stored.                  |
-| `failed`              | Processing failed; the saved entry remains.                     |
-| `timeout`             | Generation exceeded its timeout.                                |
-| `provider_error`      | Provider/configuration failure, including a missing OpenAI key. |
-| `invalid_output`      | Output remained invalid after the available repair.             |
-| `daily_cap_reached`   | The shared daily model budget prevented a reservation.          |
-| `entry_limit_reached` | The entry already has three feedback records.                   |
-| `too_long`            | The saved text exceeds the feedback limit.                      |
-| `not_language_text`   | The Jev language gate refused the text.                         |
-
-Action results can also report `validation` or `unknown`. A preflight refusal need not create a feedback row or a new failed state in storage.
-
-Jev has two roles. While writing, blur or a 2.5-second typing pause requests a main-issue judgement through `/api/jev`.
-Text shorter than eight trimmed characters and unchanged drafts are skipped. A low-confidence issue becomes `uncertain`; missing or failed checks return no note and do not block saving.
-This judgement makes no OpenAI call. Its severity answer is logged; the badge uses the main issue.
-
-Live checks are on by default. The **Live checks** switch beside each editor stops automatic checks, cancels a waiting check and ignores results already in flight. Draft text is sent to Jev when configured; a request already sent cannot be recalled by switching checks off or discarding a draft. Saved-entry feedback still runs its separate Jev language gate when live checks are off.
-
-Before saved text reaches the feedback model, a separate Jev question classifies its meaning in the target language.
-Standard, informal and meaningful mixed text pass. Formula-only, encoded, random and other-language text are refused when classification confidence is at least 0.5.
-The unused model reservation is marked `cancelled` and kept for audit, outside the daily model budget. A refusal with zero model attempts does not occupy a feedback request slot.
-Jev has a three-second timeout and a separate 200-check daily cap, shared by judgements and language gates.
-An unavailable, invalid, low-confidence or capped check allows feedback to proceed. This is a best-effort gate, not a guarantee that all non-language text is blocked.
-Both roles use `jev-latest` via the server adapter.
-
-## Stage 2 approach
-
-The insight is to make repeated categories visible across entries, rather than generate a new agent loop.
-The journal insight card shows up to three categories, counts all stored ready corrections on visible entries, and highlights a leading category after five total corrections.
-Repeated feedback on the same entry contributes again. These are correction counts, not distinct mistakes, proficiency scores or evidence of learning progress.
-
-An explicit summary action sends up to ten latest visible entries to `gpt-6-luna`, asking for learning patterns and one next step in the interface language.
-It shares the daily model budget. There is one reservation per journal per London day across all locales; failure also consumes that daily opportunity.
-The summary provider checks completion, nonblank text and a 2,000-character bound, with a 20-second timeout and no retries.
-The three-sentence and language requirements are prompt instructions, without the feedback validator's language check.
-
-Entry changes and source deletion invalidate stored summaries in the same transaction under the journal lock. They also revoke completion of an in-flight summary, so stale output cannot reappear after an edit or restore. Invalidation retains the daily summary reservation and metered usage.
-
-The Jev pilot supplies an independent quick judgement and the language gate. It does not produce explained corrections.
-Recorded live samples are in [Stage 2 results](docs/stage2-live-results.md) and [language-gate results](docs/jev-gate-live-results.md).
-These are small historical observations, not owner approval or broad quality benchmarks.
-
-## Testing and verification
+## Testing
 
 ```sh
 pnpm lint
 pnpm typecheck
-pnpm build
-pnpm test
-pnpm exec prettier --check README.md docs/README.md
-```
-
-`pnpm format:check` checks the whole repository. `pnpm format` rewrites it, so use it only when that broader change is intended.
-For database and browser suites, start Docker first:
-
-```sh
-pnpm db:up
-pnpm test:integration
+pnpm test                              # unit tests, fakes only
+pnpm db:up && pnpm test:integration    # real Postgres
 pnpm exec playwright install chromium
-pnpm test:e2e
+pnpm test:e2e                          # browser tests at phone and desktop widths
 ```
 
-| Layer                   | What it covers                                                                                                                                                             | What it does not cover                                                                                                                                                          |
-| ----------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `pnpm test`             | Unit schemas, prompts, actions, output validation, state transitions, SDK behaviour and Jev scheduling using fakes. Default database, socket and fetch access are blocked. | Real database constraints, a rendered browser, real provider quality or availability.                                                                                           |
-| `pnpm test:integration` | Real Postgres repositories, migrations, limits, concurrency, deletion/restore, feedback persistence and insight counts with fake providers.                                | Browser behaviour or live provider responses.                                                                                                                                   |
-| `pnpm test:e2e`         | Chromium, the real app, Server Actions and test Postgres. Flows include 375px touch emulation, feedback states, languages, calendar, trash, settings and larger layouts.   | Real OpenAI/Jev calls, other browser engines or physical phone keyboard behaviour. Providers are deterministic test adapters; some tests also seed data or intercept responses. |
-| `pnpm test:live`        | Opt-in real provider samples for feedback, Jev and summaries. Flags select the checks below.                                                                               | Broad quality evaluation, normal browser flows or owner review. Without flags, the live tests skip.                                                                             |
+| Layer                     | Covers                                                               | Does not cover                                   |
+| ------------------------- | -------------------------------------------------------------------- | ------------------------------------------------ |
+| Unit (`pnpm test`)        | Validation, actions, state changes, prompts                          | Real database, real browser, real model quality  |
+| Integration               | Real Postgres: migrations, limits, concurrency, deletion and restore | Browser, live providers                          |
+| Browser (`pnpm test:e2e`) | Chromium at 375px and 1280px, feedback states, settings, trash       | Other browser engines, physical phone keyboards  |
+| Live (`pnpm test:live`)   | Opt-in calls to OpenAI and Jev                                       | Broad quality evaluation. Skipped unless enabled |
 
-Integration and browser setup create the test database if absent, apply committed migrations, then truncate its public tables before and after the suite.
-Migration history remains. The first run needs a database user allowed to create the test database.
-Both suites load `DATABASE_URL` and `TEST_DATABASE_URL` from the environment or `.env`; the example test URL targets `journal_test` on localhost port 5433.
-Restricted-role integration tests also create temporary roles, switch roles and transfer test-table ownership. The default Docker user supports these operations.
-They exercise the shipped grants with unique role names in the test database and remove the roles at teardown.
-The URL guard requires a separate database ending in `_test`, on the same host/port, with no query or fragment overrides.
-Run database suites one at a time. They share the test database.
+## Documentation map
 
-Playwright starts its own production build/server on port 3100 and refuses an existing server.
-It passes `TEST_DATABASE_URL` as the app's `DATABASE_URL`, sets `APP_HOST=127.0.0.1`, enables fake providers and blanks both provider keys.
-On PowerShell, `$env:PLAYWRIGHT_DEV_SERVER = '1'` selects the optional dev server on port 3117 instead. Clear it to return to production mode.
+| Where                                                          | What it is for                                                 |
+| -------------------------------------------------------------- | -------------------------------------------------------------- |
+| `README.md`                                                    | This page: setup, architecture, limits                         |
+| `DECISIONS.md`                                                 | Each design question, the choice, the reason and the trade-off |
+| `docs/database-roles.md`                                       | Optional least-privilege database roles                        |
+| `docs/stage2-live-results.md`, `docs/jev-gate-live-results.md` | Recorded samples from live provider calls                      |
+| `scripts/`                                                     | Setup and test helpers                                         |
+| `drizzle/`                                                     | Database migrations                                            |
 
-Live flags are `RUN_LIVE_AI=1` (two feedback calls), `RUN_STAGE2_LIVE=1` (six Jev checks and three summaries), and `RUN_JEV_GATE_LIVE=1` (six language-gate checks).
-Enable only the intended check. The latter two require a migrated `journal_test`, use real call ledgers and rewrite their result documents.
-Live configuration does not create, migrate or reset the database.
-For example, after `pnpm test:integration` has prepared the database, run only the gate check in PowerShell:
+## Limits
 
-```powershell
-$env:RUN_JEV_GATE_LIVE = '1'
-node scripts/with-test-database.mjs test:live
-Remove-Item Env:RUN_JEV_GATE_LIVE
-```
-
-Set both provider keys for Stage 2. Feedback-only needs `OPENAI_API_KEY` and does not persist to Postgres.
-The wrapper selects `journal_test`; live setup uses it as `DATABASE_URL`.
-No live calls were made for this documentation handover.
-
-## Trade-offs and scope
-
-The [decisions log](DECISIONS.md) explains alternatives and superseding choices. It is append-only; older open items are historical where a later decision resolves them.
-
-- One Next.js full-stack app reduces processes and deployment units. It uses server rendering and browser navigation and is not a pure SPA (D-023, D-028).
-- Drizzle keeps SQL migrations reviewable and avoids client generation, at the cost of unfamiliarity for a Prisma user (D-003).
-- Structured output suits one feedback object. The app owns reads, writes and limits; there is no model tool loop (D-005, D-020).
-- English, Spanish and Italian now ship. Language and level are required; focus is optional and steers corrections. Intention is not collected (D-024, D-033 supersede earlier onboarding choices).
-- Three displayed corrections keep the task small but can omit errors. There is no show-all mode. Explanations support three interface languages independently of the journal language (D-019).
-- Writing is stored before model work. Feedback is automatic on initial creation, not on every edit/save. Later feedback is explicit and bounded (D-022 and current actions).
-- The requested description of no Jev in the feedback path is not true of this revision: the language gate runs there. Jev still does not generate the corrections.
-- Editing exists, but a guided rewrite-and-resubmit learning exercise remains a next step, outside Stage 1 core (D-026).
-- No speaking, sharing, social features, streaks, progress charts or read-only AI tools are built (D-015, D-016, D-020).
-- Copied shadcn components keep UI code reviewable. System fonts avoid build-time font downloads. Mobile-first Chromium coverage takes priority over desktop-only refinements (D-007, D-012, D-032).
-- Authentication is deferred for the local single-person demo. Public access and a second user require it (D-029).
-
-## Gaps and known limits
-
-1. Single learner only: data and settings have no user association or tenant separation.
-2. No authentication or ownership checks: pages, actions and the API cannot identify the caller.
-3. One-command setup is planned but absent; installation, database startup and migrations are separate steps.
-4. Owner review of live model quality is not evidenced in the repository; recorded samples do not establish approval.
-5. Windows build cache locks are an environment risk named in the handover brief; their occurrence cannot be established from source code.
-6. Jev is in the feedback path, contrary to the brief's requested omission; this README documents the implemented gate.
-7. Initial save requests feedback automatically, so a blanket claim that all feedback is manual would be inaccurate.
-8. The historical Stage 1 HTML contains old 5,000-character limits and future-action descriptions; use the current code and this README for implemented behaviour.
-9. Feedback uses in-process post-response work, without a durable queue or an automatic stale-pending recovery worker.
-10. Summary language and three-sentence quality are prompt requirements; code only checks completion, nonblank output and length.
-11. Trashed entries still occupy the ten-entry allowance; both the UI and server enforce this, so permanent deletion is needed to free a slot.
-12. The feedback response has no assumed-level field, although D-018 proposed showing one; the prompt receives the journal's level.
+- **Single user.** Data and settings have no user association.
+- **No authentication or ownership checks.** Anyone who can reach the app can use it. Before any public deployment, add login and check ownership in every action and route.
+- **Quality is sampled, not evaluated.** Live calls confirm the integration works. They do not measure teaching quality.
+- **No durable job queue.** Feedback runs after the response. A request that stalls is marked failed after two minutes and can be retried.
+- **Summary language is a prompt rule.** The code checks that a summary exists and fits its length, not that it follows the language instructions.
+- **Trash counts toward the 10-entry limit** until an entry is permanently deleted.
