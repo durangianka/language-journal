@@ -144,6 +144,23 @@ pnpm test:e2e                          # browser tests at phone and desktop widt
 | Browser (`pnpm test:e2e`) | Chromium at 375px and 1280px, feedback states, settings, trash       | Other browser engines, physical phone keyboards  |
 | Live (`pnpm test:live`)   | Opt-in calls to OpenAI and Jev                                       | Broad quality evaluation. Skipped unless enabled |
 
+## Evaluation
+
+Feedback quality was checked in three ways. The results are small and specific, not a benchmark.
+
+- **Owner review (Spanish and Italian, plus English).** The owner reads all three languages and used the app on real entries. The feedback was useful, especially for Italian and Spanish, which is why those were chosen as the main test languages.
+- **Fresh-context review.** A reviewer with no knowledge of the app ran 30 entries through the browser: ten each in English, Spanish and Italian, at Basic (A2) level. All 30 received feedback, and none failed or was refused. The reviewer rated the quality 4 out of 5 and judged it helpful for learning in part.
+- **Insight review.** The same reviewer checked the journal insight card and the summary for each journal against its entries. [Result to be added.]
+
+What the reviews found:
+
+- Corrections were mostly right for grammar and spelling, and correct sentences were usually left alone.
+- Some over-corrections: a natural phrase was changed without a clear reason (`in her house` to `at her house`).
+- One explanation generalised a rule wrongly (`-s` after a singular subject, applied to `I`).
+- Some explanations used terms such as `past participle` without a simple example, which is too technical for A2.
+
+Not evaluated: repeated generations for the same text, levels other than A2, retention over time, and the quality of feedback written in each interface language.
+
 ## Documentation map
 
 | Where                                                          | What it is for                                                            |
@@ -161,7 +178,7 @@ pnpm test:e2e                          # browser tests at phone and desktop widt
 
 - **Single user.** Data and settings have no user association.
 - **No authentication or ownership checks.** Anyone who can reach the app can use it. Before any public deployment, add login and check ownership in every action and route.
-- **Quality is sampled, not evaluated.** Live calls confirm the integration works. They do not measure teaching quality.
+- **Quality is reviewed, not measured.** See [Evaluation](#evaluation). The review covered 30 entries at A2 and found over-corrections and some over-technical explanations.
 - **No durable job queue.** Feedback runs after the response. A request that stalls is marked failed after two minutes and can be retried.
 - **Summary language is a prompt rule.** The code checks that a summary exists and fits its length, not that it follows the language instructions.
 - **Trash counts toward the 10-entry limit** until an entry is permanently deleted.
