@@ -23,6 +23,7 @@ vi.mock("../../src/lib/journal", () => ({
   getEntry: vi.fn(),
   listEntries: vi.fn(),
 }));
+vi.mock("../../src/lib/journal/trash", () => ({ emptyTrash: vi.fn() }));
 vi.mock("next/server", () => ({ after: vi.fn() }));
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
 import { after } from "next/server";
@@ -161,7 +162,12 @@ test.each([
   ["encoded", 0.99, false],
   ["random", 0.99, false],
   ["other_language", 0.99, false],
-  ["random", 0.2, false],
+  ["random", 0.2, true],
+  ["random", 0.499, true],
+  ["random", 0.5, false],
+  ["encoded", 0.49, true],
+  ["formula_or_numbers", 0.2, true],
+  ["other_language", 0.2, true],
 ] as const)(
   "feedback gate: %s confidence %s allows model: %s",
   async (choice, confidence, allowed) => {

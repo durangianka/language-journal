@@ -50,6 +50,13 @@
       "when": 1794484316445,
       "tag": "0006_create_feedback_settings",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1794561841248,
+      "tag": "0007_cancel_unused_model_reservations",
+      "breakpoints": true
     }
   ]
 }
