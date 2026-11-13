@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { Plus, PenLine } from "lucide-react";
-import type { ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import { DeleteActions } from "@/components/delete-actions";
 import { DeletedNotice } from "@/components/deleted-notice";
 import { FeedbackStatus } from "@/components/feedback-status";
@@ -34,7 +34,10 @@ export function JournalEntryGate({
   t: Dictionary;
   children: ReactNode;
 }) {
-  return entries.length >= LIMITS.entriesPerJournal ? <LimitMessage t={t} /> : children;
+  // Once admitted, keep this editor mounted through revalidation. Saving the
+  // tenth entry must not remove newer unsaved changes. The server still caps creates.
+  const [admitted] = useState(entries.length < LIMITS.entriesPerJournal);
+  return admitted ? children : <LimitMessage t={t} />;
 }
 
 export function JournalReview({

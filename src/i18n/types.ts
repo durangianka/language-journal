@@ -46,6 +46,10 @@ export type Dictionary = {
   restored: string;
   restoreFailed: string;
   words: string;
+  liveChecks: string;
+  liveCheckDisclosure: string;
+  snapshotSaved: string;
+  feedbackPreviousSuccess: string;
   jevNoIssues: string;
   jevChecking: string;
   jevUncertain: string;

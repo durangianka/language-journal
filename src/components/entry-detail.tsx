@@ -42,7 +42,6 @@ export function EntryDetail({
       </div>
       {editing ? (
         <EntryForm
-          key={entry.updatedAt}
           journalId={entry.journalId}
           initialEntry={entry}
           locale={locale}

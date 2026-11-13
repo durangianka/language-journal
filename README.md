@@ -23,7 +23,8 @@ Copy-Item .env.example .env
 The example credentials are for the local development database. If you change
 `POSTGRES_USER`, `POSTGRES_PASSWORD`, or `POSTGRES_DB`, also update `DATABASE_URL`
 and `TEST_DATABASE_URL` (keeping its database name `journal_test`).
-Leave `AI_PROVIDER_API_KEY` empty until a provider is chosen.
+Set `OPENAI_API_KEY` to enable saved-entry feedback and journal summaries.
+Set `JEV_API_KEY` to enable the optional Jev checks described below.
 
 Start Postgres on host port 5433 and run the app:
 
@@ -35,6 +36,34 @@ pnpm dev
 
 Open <http://localhost:3000>. The home page is a development placeholder.
 Postgres data persists in a named Docker volume. `docker compose down` stops it.
+
+## AI providers and writing privacy
+
+Live checks are on by default in each editor. Pausing for 2.5 seconds or leaving
+the writing field sends the current draft to the app's `/api/jev` route. With
+`JEV_API_KEY` configured, that route sends the full text to Jev (`jev-latest` at
+`api.typesafe.ai`) to classify possible issues. The **Live checks** switch beside
+the editor turns automatic checks off, cancels a waiting check and ignores any
+result already in flight. A request already sent cannot be recalled. Discarding
+a draft does not undo a transmission.
+
+Saving a new entry automatically requests feedback. Feedback requests, including
+manual retries, send the saved text to Jev for a language check when configured,
+even when live checks are off. Jev outages fail open. Correction feedback and
+journal summaries use OpenAI's Responses API with `gpt-6-luna`, configured by
+the server-only `OPENAI_API_KEY`. Feedback includes the saved text snapshot,
+journal language, level, focus and feedback preferences. Summaries include up to
+10 active entries. OpenAI requests set `store: false`; provider-side processing
+and retention remain subject to the provider's terms. Neither key is sent to
+the browser.
+
+Feedback JSON has a 4,096-output-token budget per model call and a 20-second
+timeout. One SDK retry and one invalid-output repair share the existing metered
+call cap. Pending feedback expires after two minutes and is marked failed on
+the next read or request, including after a server restart. Retry is available
+within the three-request entry limit and shared 50-model-call daily limit.
+Successful feedback stays visible alongside a later failed attempt, with the
+original writing snapshot that produced it.
 
 ## Checks
 

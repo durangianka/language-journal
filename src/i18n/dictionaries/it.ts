@@ -51,6 +51,12 @@ export const it = {
   restored: "Ripristinato.",
   restoreFailed: "Impossibile ripristinare. Riprova.",
   words: "parole",
+  liveChecks: "Controlli in tempo reale",
+  liveCheckDisclosure:
+    "Le pause e l'uscita da questo campo inviano il testo attuale a Jev per i controlli in tempo reale.",
+  snapshotSaved: "Versione salvata. Le modifiche più recenti non sono ancora salvate.",
+  feedbackPreviousSuccess:
+    "Sono mostrati gli ultimi commenti completati e il testo che hanno analizzato.",
   jevNoIssues: "Sembra corretto",
   jevChecking: "Controllo del testo in corso",
   jevUncertain: "Non sono sicuro di questo testo. Ottieni feedback per verificare.",

@@ -51,6 +51,12 @@ export const es = {
   restored: "Restaurado.",
   restoreFailed: "No se pudo restaurar. Inténtalo de nuevo.",
   words: "palabras",
+  liveChecks: "Revisión en vivo",
+  liveCheckDisclosure:
+    "Las pausas y salir de este campo envían tu texto actual a Jev para revisarlo en vivo.",
+  snapshotSaved: "Versión guardada. Tus cambios más recientes siguen sin guardar.",
+  feedbackPreviousSuccess:
+    "Se muestran los últimos comentarios completados y el texto que analizaron.",
   jevNoIssues: "Parece correcto",
   jevChecking: "Revisando tu texto",
   jevUncertain: "No estoy seguro de este texto. Obtén comentarios para comprobarlo.",

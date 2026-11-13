@@ -50,6 +50,11 @@ export const en = {
   restored: "Restored.",
   restoreFailed: "We could not restore this. Please try again.",
   words: "words",
+  liveChecks: "Live checks",
+  liveCheckDisclosure:
+    "Pauses and leaving this field send your current text to Jev for live checks.",
+  snapshotSaved: "Snapshot saved. Your newer changes are still unsaved.",
+  feedbackPreviousSuccess: "Showing your last successful feedback and the writing it analysed.",
   jevNoIssues: "Looks good",
   jevChecking: "Checking your text",
   jevUncertain: "Not sure about this one. Get feedback to check.",
