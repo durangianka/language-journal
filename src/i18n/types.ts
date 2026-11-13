@@ -53,6 +53,7 @@ export type Dictionary = {
   jevNoIssues: string;
   jevChecking: string;
   jevUncertain: string;
+  jevNotLanguage: string;
   jevGrammar: string;
   jevVocabulary: string;
   jevSpelling: string;
@@ -60,6 +61,7 @@ export type Dictionary = {
   jevDetails: string;
   journalInsight: string;
   insightTopCategory: string;
+  insightTied: string;
   insightNoMistakes: string;
   insightCountsHeading: string;
   insightCountsScope: string;

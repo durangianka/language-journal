@@ -60,6 +60,7 @@ export const it = {
   jevNoIssues: "Sembra corretto",
   jevChecking: "Controllo del testo in corso",
   jevUncertain: "Non sono sicuro di questo testo. Ottieni feedback per verificare.",
+  jevNotLanguage: "Non sono frasi nella lingua di questo diario. Controlla il testo.",
 
   jevGrammar: "Possibile problema di grammatica",
   jevVocabulary: "Possibile problema di vocabolario",
@@ -68,6 +69,7 @@ export const it = {
   jevDetails: "Ottieni feedback per vedere la correzione",
   journalInsight: "Analisi del diario",
   insightTopCategory: "La maggior parte degli errori in questo diario riguarda: {category}.",
+  insightTied: "I tuoi errori principali sono a pari merito in questo diario: {categories}.",
   insightNoMistakes: "La tua analisi appare dopo 5 correzioni ({count} di 5).",
   insightCountsHeading: "Errori finora in questo diario",
   insightCountsScope:

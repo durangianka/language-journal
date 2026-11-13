@@ -27,8 +27,8 @@ export async function JournalInsight({
   const total = counts.reduce((sum, { count }) => sum + count, 0);
   const top = counts
     .filter((c) => c.count > 0)
-    .sort((a, b) => b.count - a.count || a.category.localeCompare(b.category))
-    .slice(0, 3);
+    .sort((a, b) => b.count - a.count || a.category.localeCompare(b.category));
+  const leading = top.filter((c) => c.count === top[0]?.count).map((c) => t[c.category]);
   return (
     <Card aria-label={t.journalInsight} className="bg-accent text-accent-foreground shadow-sm">
       <CardHeader>
@@ -57,7 +57,9 @@ export async function JournalInsight({
         ) : null}
         <p className="text-sm text-muted-foreground">
           {total >= 5 && top.length
-            ? t.insightTopCategory.replace("{category}", t[top[0].category])
+            ? leading.length > 1
+              ? t.insightTied.replace("{categories}", leading.join(", "))
+              : t.insightTopCategory.replace("{category}", leading[0])
             : t.insightNoMistakes.replace("{count}", String(total))}
         </p>
         <JournalSummary journalId={id} initialSummary={summary} t={t} key={locale} />

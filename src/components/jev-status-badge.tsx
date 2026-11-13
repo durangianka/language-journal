@@ -41,7 +41,9 @@ export function JevStatusBadge({
       ? t.jevNoIssues
       : issue === "uncertain"
         ? t.jevUncertain
-        : issue
+        : issue === "not_language"
+          ? t.jevNotLanguage
+          : issue
           ? `${t[issueKeys[issue]]} ${t.jevDetails}`
           : "";
 

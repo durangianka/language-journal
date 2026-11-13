@@ -6,6 +6,7 @@ import {
   type JevAnswers,
   type JevNote,
   type JevQuestions,
+  type TextKind,
 } from "./contract";
 import type { Locale } from "../../config/locales";
 import { JevHttpError } from "./errors";
@@ -19,14 +20,22 @@ export interface JevStore {
 }
 export const jevTimeoutMs = 3_000;
 
+const refusedKinds: readonly TextKind[] = ["formula_or_numbers", "encoded", "random", "other_language"];
+
+// The live badge asks the same language question as the save gate, in the journal language.
 export async function judgeEntry(
   text: string,
   entryId: string | null,
   client: JevClient,
   store: JevStore,
+  language: Locale,
 ): Promise<JevNote | null> {
   if (Array.from(text.trim()).length < 8 || Array.from(text).length > 2000) return null;
-  const answers = await queryEntry(text, entryId, client, store);
+  const answers = await queryEntry(text, entryId, client, store, feedbackJevQuestions(language));
+  const classification = answers?.text_kind;
+  if (!classification || classification.confidence < 0.5) return null;
+  if (refusedKinds.includes(classification.choice))
+    return { issue: "not_language", confidence: classification.confidence };
   const main = answers?.main_issue;
   return main
     ? { issue: main.confidence >= 0.5 ? main.choice : "uncertain", confidence: main.confidence }
@@ -45,7 +54,7 @@ export async function checkEntryLanguage(
   const classification = answers?.text_kind;
   if (!classification || classification.confidence < 0.5) return true;
   const kind = classification.choice;
-  return !kind || !["formula_or_numbers", "encoded", "random", "other_language"].includes(kind);
+  return !kind || !refusedKinds.includes(kind);
 }
 
 async function queryEntry(

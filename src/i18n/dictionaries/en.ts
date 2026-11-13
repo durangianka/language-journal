@@ -58,6 +58,7 @@ export const en = {
   jevNoIssues: "Looks good",
   jevChecking: "Checking your text",
   jevUncertain: "Not sure about this one. Get feedback to check.",
+  jevNotLanguage: "Not sentence language in this journal. Check the text.",
 
   jevGrammar: "Possible grammar issue",
   jevVocabulary: "Possible vocabulary issue",
@@ -66,6 +67,7 @@ export const en = {
   jevDetails: "Get feedback to see the fix",
   journalInsight: "Journal insight",
   insightTopCategory: "Most of your mistakes this journal are {category}.",
+  insightTied: "Your top mistakes are tied in this journal: {categories}.",
   insightNoMistakes: "Your insight appears after 5 corrections ({count} of 5).",
   insightCountsHeading: "Mistakes so far in this journal",
   insightCountsScope:
