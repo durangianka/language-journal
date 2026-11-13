@@ -232,6 +232,7 @@ test("entry success returns the entry id and database failures map to form error
     createdAt: journal.createdAt,
     updatedAt: journal.createdAt,
     latestFeedback: null,
+    latestSuccessfulFeedback: null,
   });
   expect(await createEntryAction(form(values))).toEqual({ success: true, id });
   expect(createEntry).toHaveBeenCalledWith(values);
@@ -253,6 +254,7 @@ test("automatic feedback failure cannot turn a persisted save into an error", as
     createdAt: journal.createdAt,
     updatedAt: journal.createdAt,
     latestFeedback: null,
+    latestSuccessfulFeedback: null,
   });
   vi.mocked(getLocale).mockResolvedValue("it");
   vi.mocked(requestFeedback).mockRejectedValue(new Error("Unavailable"));
@@ -268,6 +270,7 @@ test("editing validates the same fields, keeps the entry ID and never starts fee
     createdAt: journal.createdAt,
     updatedAt: journal.createdAt,
     latestFeedback: null,
+    latestSuccessfulFeedback: null,
   });
   expect(await updateEntryAction(form({ ...values, entryId: id }))).toEqual({ success: true, id });
   expect(updateEntry).toHaveBeenCalledExactlyOnceWith(id, values);

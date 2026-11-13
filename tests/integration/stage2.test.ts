@@ -10,10 +10,17 @@ import {
   journals,
   modelCalls,
 } from "../../src/db/schema";
-import { createEntry, createJournal, deleteEntry, deleteJournal } from "../../src/lib/journal";
+import {
+  createEntry,
+  createJournal,
+  deleteEntry,
+  deleteJournal,
+  updateEntry,
+  restoreDeleted,
+} from "../../src/lib/journal";
 import { beginFeedback, feedbackStore } from "../../src/lib/ai/repository";
 import { runFeedback } from "../../src/lib/ai/service";
-import { summariseJournal } from "../../src/lib/insight/repository";
+import { summariseJournal, getTodayInsight } from "../../src/lib/insight/repository";
 import { jevStore } from "../../src/lib/jev/repository";
 
 const ids: string[] = [];
@@ -81,6 +88,68 @@ test("summary shares the 50 model-call cap with feedback", async () => {
   expect(provider).not.toHaveBeenCalled();
   expect(entry.id).toBeTruthy();
 });
+
+test.each(["soft", "hard", "edit", "journal"] as const)(
+  "%s invalidates stored summaries without refunding usage",
+  async (change) => {
+    const { journal, entry } = await fixture();
+    const provider = vi.fn(async () => ({
+      text: "Private source summary",
+      inputTokens: 10,
+      outputTokens: 5,
+    }));
+    await summariseJournal(journal.id, "en", provider);
+    if (change === "edit")
+      await updateEntry(entry.id, { journalId: journal.id, body: "Revised writing." });
+    else if (change === "journal") {
+      await deleteJournal(journal.id, "soft");
+      await restoreDeleted(journal.id, "journal");
+    } else await deleteEntry(entry.id, change);
+    expect(await getTodayInsight(journal.id, "en")).toBeNull();
+    expect(
+      await db
+        .select({ summary: journalInsights.summary })
+        .from(journalInsights)
+        .where(eq(journalInsights.journalId, journal.id)),
+    ).toEqual([{ summary: null }]);
+    expect(await summariseJournal(journal.id, "en", provider)).toEqual({
+      summary: null,
+      reason: "daily",
+    });
+    expect(provider).toHaveBeenCalledTimes(1);
+    expect(await db.select().from(modelCalls)).toHaveLength(1);
+  },
+);
+
+test.each(["soft", "hard", "edit", "restore"] as const)(
+  "%s rejects an in-flight summary whose sources changed",
+  async (change) => {
+    const { journal, entry } = await fixture();
+    if (change === "restore") await deleteEntry(entry.id, "soft");
+    if (change === "restore")
+      await createEntry({ journalId: journal.id, body: "Other active writing." });
+    let finish!: (value: { text: string; inputTokens: number; outputTokens: number }) => void;
+    let started!: () => void;
+    const begun = new Promise<void>((resolve) => {
+      started = resolve;
+    });
+    const running = summariseJournal(journal.id, "en", async () => {
+      started();
+      return new Promise((resolve) => {
+        finish = resolve;
+      });
+    });
+    await begun;
+    if (change === "edit")
+      await updateEntry(entry.id, { journalId: journal.id, body: "Revised writing." });
+    else if (change === "restore") await restoreDeleted(entry.id, "entry");
+    else await deleteEntry(entry.id, change);
+    finish({ text: "Stale private summary", inputTokens: 10, outputTokens: 5 });
+    expect(await running).toEqual({ summary: null, reason: "failed" });
+    expect(await getTodayInsight(journal.id, "en")).toBeNull();
+    expect(await db.select().from(modelCalls)).toMatchObject([{ outcome: "failed" }]);
+  },
+);
 test.each(["journal", "entry", "feedback"])(
   "hard deleting a %s preserves the exhausted daily cap for summaries and feedback",
   async (source) => {

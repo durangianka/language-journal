@@ -38,23 +38,40 @@ export async function requestFeedback(
     const job = await beginFeedback(entryId, locale);
     revalidatePath("/journals", "layout");
     after(async () => {
-      // Preserve deletion privacy before sending the snapshot to Jev as well as the model.
-      if (!(await readEntry(job.entryId))) return;
-      const allowed = await checkEntryLanguage(
-        job.input.analysedText,
-        job.input.language,
-        job.entryId,
-        process.env.JEV_TEST_MODE === "1" ? testJevClient : jevClient,
-        jevStore,
-      );
-      if (!allowed) await refuseNonLanguageFeedback(job);
-      else
-        await runFeedback(
-          job,
-          feedbackStore,
-          process.env.FEEDBACK_TEST_MODE === "1" ? testFeedbackProvider : openAIProvider,
+      try {
+        // Preserve deletion privacy before sending the snapshot to Jev as well as the model.
+        const source = await readEntry(job.entryId);
+        if (
+          !source ||
+          (source.latestFeedback?.id === job.id && source.latestFeedback.status !== "pending")
+        )
+          return;
+        const allowed = await checkEntryLanguage(
+          job.input.analysedText,
+          job.input.language,
+          job.entryId,
+          process.env.JEV_TEST_MODE === "1" ? testJevClient : jevClient,
+          jevStore,
         );
-      revalidatePath("/journals", "layout");
+        if (!allowed) await refuseNonLanguageFeedback(job);
+        else
+          await runFeedback(
+            job,
+            feedbackStore,
+            process.env.FEEDBACK_TEST_MODE === "1" ? testFeedbackProvider : openAIProvider,
+          );
+      } catch {
+        // The whole callback is covered, including its initial read and language gate.
+        // Do not log errors that could contain journal or provider text.
+      } finally {
+        try {
+          // Conditional settlement leaves ready, refused and expired jobs untouched.
+          await feedbackStore.failed(job.id, "provider_error");
+          revalidatePath("/journals", "layout");
+        } catch {
+          // A database outage is recovered by the persisted deadline on the next read.
+        }
+      }
     });
     return { success: true, data: job.feedback };
   } catch (error) {

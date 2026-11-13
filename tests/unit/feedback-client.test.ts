@@ -23,6 +23,7 @@ const ready: FeedbackDto = {
   reason: null,
   locale: "en",
   correctedText: "I go to school.",
+  analysedText: "I goes to school.",
   corrections: [],
   createdAt: "2026-11-12T12:00:00Z",
 };

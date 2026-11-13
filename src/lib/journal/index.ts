@@ -2,10 +2,16 @@ import "server-only";
 
 import { and, count, desc, eq, isNull } from "drizzle-orm";
 import { db } from "../../db/client";
-import { entries, journalMistakeCounts, journals } from "../../db/schema";
+import { entries, feedback, journalMistakeCounts, journals } from "../../db/schema";
 import { refreshMistakeCounts } from "../insight/counts";
+import { invalidateJournalInsights } from "../insight/invalidate";
 import { JournalFullError } from "./errors";
-import { latestFeedback, latestFeedbackForEntries } from "../ai/repository";
+import {
+  failPendingFeedback,
+  listFeedback,
+  latestFeedbackForEntries,
+  toFeedbackDto,
+} from "../ai/repository";
 import { LIMITS, type FeedbackDto } from "../feedback-contract";
 import {
   createEntrySchema,
@@ -29,7 +35,11 @@ function toJournal(row: typeof journals.$inferSelect): Journal {
   };
 }
 
-function toEntry(row: typeof entries.$inferSelect, latest: FeedbackDto | null = null): Entry {
+function toEntry(
+  row: typeof entries.$inferSelect,
+  latest: FeedbackDto | null = null,
+  successful: FeedbackDto | null = null,
+): Entry {
   return {
     id: row.id,
     journalId: row.journalId,
@@ -38,6 +48,7 @@ function toEntry(row: typeof entries.$inferSelect, latest: FeedbackDto | null = 
     createdAt: row.createdAt.toISOString(),
     updatedAt: row.updatedAt.toISOString(),
     latestFeedback: latest,
+    latestSuccessfulFeedback: successful,
   };
 }
 
@@ -82,6 +93,7 @@ export async function createEntry(input: CreateEntryInput): Promise<Entry> {
       .where(eq(entries.journalId, values.journalId));
     if (existing.total >= LIMITS.entriesPerJournal) throw new JournalFullError();
     const [row] = await tx.insert(entries).values(values).returning();
+    await invalidateJournalInsights(tx, values.journalId);
     return toEntry(row);
   });
 }
@@ -100,7 +112,9 @@ export async function listEntries(journalId: string): Promise<Entry[]> {
     )
     .orderBy(desc(entries.entryDate), desc(entries.createdAt));
   const latest = await latestFeedbackForEntries(rows.map(({ entry }) => entry.id));
-  return rows.map(({ entry }) => toEntry(entry, latest.get(entry.id) ?? null));
+  return rows.map(({ entry }) =>
+    toEntry(entry, latest.get(entry.id)?.latest ?? null, latest.get(entry.id)?.successful ?? null),
+  );
 }
 
 export async function getEntry(id: string): Promise<Entry | null> {
@@ -116,7 +130,13 @@ export async function getEntry(id: string): Promise<Entry | null> {
       ),
     )
     .limit(1);
-  return row ? toEntry(row.entry, await latestFeedback(id)) : null;
+  if (!row) return null;
+  const history = await listFeedback(id);
+  return toEntry(
+    row.entry,
+    history[0] ?? null,
+    history.find((record) => record.status === "ready") ?? null,
+  );
 }
 
 export async function updateEntry(id: string, input: CreateEntryInput): Promise<Entry | null> {
@@ -139,7 +159,19 @@ export async function updateEntry(id: string, input: CreateEntryInput): Promise<
         ),
       )
       .returning();
-    return row ? toEntry(row, await latestFeedback(id)) : null;
+    if (!row) return null;
+    await invalidateJournalInsights(tx, values.journalId);
+    const history = await tx
+      .select()
+      .from(feedback)
+      .where(eq(feedback.entryId, id))
+      .orderBy(desc(feedback.createdAt), desc(feedback.id));
+    const successful = history.find((record) => record.status === "ready");
+    return toEntry(
+      row,
+      history[0] ? toFeedbackDto(history[0]) : null,
+      successful ? toFeedbackDto(successful) : null,
+    );
   });
 }
 
@@ -157,10 +189,12 @@ export async function deleteEntry(id: string, mode: "soft" | "hard" = "soft") {
       .where(eq(journals.id, source.journalId))
       .for("update");
     if (mode === "soft") {
+      await failPendingFeedback(tx, [id]);
       await tx.update(entries).set({ deletedAt: new Date() }).where(eq(entries.id, id));
     } else {
       await tx.delete(entries).where(eq(entries.id, id));
     }
+    await invalidateJournalInsights(tx, source.journalId);
     await refreshMistakeCounts(tx, source.journalId);
   });
 }
@@ -179,10 +213,15 @@ export async function deleteJournal(id: string, mode: "soft" | "hard" = "soft") 
       return;
     }
     if (journal.deletedAt) return;
+    await invalidateJournalInsights(tx, id);
     const existing = await tx
-      .select({ deletedAt: entries.deletedAt })
+      .select({ id: entries.id, deletedAt: entries.deletedAt })
       .from(entries)
       .where(eq(entries.journalId, id));
+    await failPendingFeedback(
+      tx,
+      existing.map((entry) => entry.id),
+    );
     const now = new Date();
     // The marker identifies this deletion batch. Keep it distinct from earlier trash.
     while (existing.some((entry) => entry.deletedAt?.getTime() === now.getTime())) {
@@ -225,6 +264,7 @@ export async function restoreDeleted(id: string, kind: "entry" | "journal") {
       .where(eq(journals.id, source.journalId))
       .for("update");
     if (!journal) throw new Error("Unavailable");
+    await invalidateJournalInsights(tx, source.journalId);
     if (kind === "journal") {
       if (journal.deletedAt) {
         await tx

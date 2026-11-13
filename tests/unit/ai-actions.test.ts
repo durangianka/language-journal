@@ -2,7 +2,7 @@ import { beforeEach, expect, test, vi } from "vitest";
 vi.mock("server-only", () => ({}));
 vi.mock("../../src/lib/ai/repository", () => ({
   beginFeedback: vi.fn(),
-  feedbackStore: {},
+  feedbackStore: { failed: vi.fn() },
   latestFeedback: vi.fn(),
   refuseNonLanguageFeedback: vi.fn(),
   FeedbackRequestError: class extends Error {
@@ -37,6 +37,7 @@ import {
   beginFeedback,
   FeedbackRequestError,
   refuseNonLanguageFeedback,
+  feedbackStore,
 } from "../../src/lib/ai/repository";
 import { jevClient } from "../../src/lib/jev/client";
 import { jevStore } from "../../src/lib/jev/repository";
@@ -70,6 +71,7 @@ beforeEach(() => {
     createdAt: "2026-11-12T00:00:00Z",
     updatedAt: "2026-11-12T00:00:00Z",
     latestFeedback: null,
+    latestSuccessfulFeedback: null,
   });
 });
 
@@ -87,6 +89,7 @@ test("returns the committed pending DTO before background work begins", async ()
     locale: "it",
     reason: null,
     correctedText: null,
+    analysedText: "Ciao",
     corrections: [],
     createdAt: "2026-11-12T00:00:00Z",
   };
@@ -133,6 +136,7 @@ async function backgroundFeedback() {
       locale: "it",
       reason: null,
       correctedText: null,
+      analysedText: "A = 2 + B = 75",
       corrections: [],
       createdAt: "2026-11-12T00:00:00Z",
     },
@@ -236,5 +240,13 @@ test("deleting before background work prevents sending text to Jev or the model"
   vi.mocked(readEntry).mockResolvedValue(null);
   await backgroundFeedback();
   expect(jevClient.judge).not.toHaveBeenCalled();
+  expect(runFeedback).not.toHaveBeenCalled();
+  expect(feedbackStore.failed).toHaveBeenCalledWith(id, "provider_error");
+});
+
+test("a failed initial background read settles the committed feedback job", async () => {
+  vi.mocked(readEntry).mockRejectedValue(new Error("Database temporarily unavailable"));
+  await expect(backgroundFeedback()).resolves.toBeUndefined();
+  expect(feedbackStore.failed).toHaveBeenCalledWith(id, "provider_error");
   expect(runFeedback).not.toHaveBeenCalled();
 });
