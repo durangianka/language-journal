@@ -4,8 +4,7 @@ import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { RotateCcw, Trash2 } from "lucide-react";
 import { toast } from "sonner";
-import { restoreDeletedAction } from "@/app/journals/feedback-actions";
-import { deleteEntry, deleteJournal } from "@/lib/feedback-client";
+import { emptyTrashAction, restoreDeletedAction } from "@/app/journals/feedback-actions";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import {
@@ -52,12 +51,8 @@ export function TrashList({
   async function empty() {
     setBusy(true);
     try {
-      for (const item of items) {
-        const result = await (item.kind === "entry"
-          ? deleteEntry(item.id, "hard")
-          : deleteJournal(item.id, "hard"));
-        if (!result.success) throw new Error("Delete failed");
-      }
+      const result = await emptyTrashAction();
+      if (!result.success) throw new Error("Delete failed");
       setOpen(false);
     } catch {
       toast.error(t.deleteFailed);

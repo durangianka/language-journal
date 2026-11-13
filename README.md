@@ -95,6 +95,10 @@ for the default local container. Setup creates the database if missing, applies 
 committed Drizzle migrations and empties its public tables before every run and
 again at teardown. Migration history is preserved. The database user needs
 `CREATEDB` permission for the first run (the local container user has it).
+The restricted-role integration tests also need permission to create temporary
+roles, switch roles and transfer ownership of test tables. The default Docker
+user supports this. These tests run the shipped role grants with unique role
+names in the test database, then remove those roles at teardown.
 
 Startup refuses missing URLs, a database name without the `_test` suffix, the same
 database name as development (even with different credentials or loopback aliases),

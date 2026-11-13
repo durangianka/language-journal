@@ -3,7 +3,7 @@ import { formatDate } from "@/components/journal-layout";
 import { SavedNotice } from "@/components/saved-notice";
 import { JournalReview } from "@/components/journal-review";
 import type { Dictionary, Locale } from "@/i18n/types";
-import { listEntries } from "@/lib/journal";
+import { countOccupiedEntrySlots, listEntries } from "@/lib/journal";
 import { idSchema } from "@/lib/journal/schemas";
 
 export async function EntriesList({
@@ -19,7 +19,11 @@ export async function EntriesList({
 }) {
   const { id } = await params;
   if (!idSchema.safeParse(id).success) notFound();
-  const [entries, query] = await Promise.all([listEntries(id), searchParams]);
+  const [entries, occupiedSlots, query] = await Promise.all([
+    listEntries(id),
+    countOccupiedEntrySlots(id),
+    searchParams,
+  ]);
   const saved = entries.find((entry) => entry.id === query.saved);
 
   return (
@@ -30,7 +34,13 @@ export async function EntriesList({
           label={t.entrySaved}
         />
       )}
-      <JournalReview id={id} initialEntries={entries} locale={locale} t={t} />
+      <JournalReview
+        id={id}
+        initialEntries={entries}
+        occupiedSlots={occupiedSlots}
+        locale={locale}
+        t={t}
+      />
     </>
   );
 }
