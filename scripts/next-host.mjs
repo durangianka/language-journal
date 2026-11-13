@@ -8,7 +8,7 @@ export function nextArguments(mode, args, env) {
   if (!["dev", "start"].includes(mode)) throw new Error("Expected dev or start.");
   if (args.some((arg) => arg === "-H" || arg.startsWith("-H") || arg.startsWith("--hostname")))
     throw new Error("Set APP_HOST to choose the listening address.");
-  return [mode, "--hostname", env.APP_HOST || "100.66.182.87", ...args];
+  return [mode, "--hostname", env.APP_HOST || "127.0.0.1", ...args];
 }
 
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
