@@ -40,9 +40,9 @@ docker compose up --build
 
 Open <http://127.0.0.1:3000>. Migrations run automatically on start. Data stays in a Docker volume, so `docker compose down` keeps it.
 
-### Without Docker for the app
+### Running the app on your machine
 
-Docker still runs the database. The app runs on your machine.
+With Docker running, Docker starts the database and the app runs on your machine.
 
 Requirements: Node.js 24 or newer, and pnpm 11.6.0 (`corepack enable` activates the pinned version).
 
@@ -52,6 +52,8 @@ pnpm dev
 ```
 
 `pnpm setup` creates `.env` if it is missing, starts the database, waits for it, installs packages and applies migrations. It never overwrites an existing `.env` and never prints key values.
+
+Without Docker, use your own Postgres 17 instead: set `DATABASE_URL` in `.env`, then run `pnpm setup:no-docker` and `pnpm dev`.
 
 ### Using the app from a phone
 
