@@ -1,9 +1,27 @@
 import { afterEach, expect, test, vi } from "vitest";
-import { judgeEntry, jevTimeoutMs, type JevStore } from "../../src/lib/jev/service";
+import { judgeEntry as judgeEntryInLanguage, jevTimeoutMs, type JevStore } from "../../src/lib/jev/service";
+
+// Every live check runs in the journal language, so the tests pass Spanish throughout.
+const judgeEntry = (
+  text: string,
+  entryId: string | null,
+  client: Parameters<typeof judgeEntryInLanguage>[2],
+  store: JevStore,
+) => judgeEntryInLanguage(text, entryId, client, store, "es");
 
 const text = "Yesterday I goes to the local market to buy some fresh fruit.";
-function result(choice = "grammar", confidence = 0.95) {
+function result(choice = "grammar", confidence = 0.95, kind = "standard_language") {
   return {
+    text_kind: {
+      type: "choice",
+      choice: kind,
+      confidence: 0.9,
+      probabilities: Object.fromEntries(
+        ["standard_language", "informal_language", "mixed", "formula_or_numbers", "encoded", "random", "other_language"].map(
+          (key) => [key, key === kind ? 0.9 : 0.014],
+        ),
+      ),
+    },
     main_issue: {
       type: "choice",
       choice,
@@ -23,6 +41,14 @@ function store(): JevStore {
   return { reserve: vi.fn(async () => "call"), finish: vi.fn(async () => {}) };
 }
 afterEach(() => vi.useRealTimers());
+
+test("formula text is reported as not language, never as no issues", async () => {
+  const log = store();
+  expect(await judgeEntry("2 + 2 = 4; 3 * 3 = 9", null, { judge: async () => result("none", 0.95, "formula_or_numbers") }, log)).toEqual({
+    issue: "not_language",
+    confidence: 0.9,
+  });
+});
 
 test("none at the confidence threshold produces the fixed no-issues note", async () => {
   const log = store();

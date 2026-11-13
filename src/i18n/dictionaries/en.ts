@@ -58,6 +58,7 @@ export const en = {
   jevNoIssues: "Looks good",
   jevChecking: "Checking your text",
   jevUncertain: "Not sure about this one. Get feedback to check.",
+  jevNotLanguage: "Not sentence language in this journal. Check the text.",
 
   jevGrammar: "Possible grammar issue",
   jevVocabulary: "Possible vocabulary issue",

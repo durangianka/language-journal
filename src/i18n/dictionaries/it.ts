@@ -60,6 +60,7 @@ export const it = {
   jevNoIssues: "Sembra corretto",
   jevChecking: "Controllo del testo in corso",
   jevUncertain: "Non sono sicuro di questo testo. Ottieni feedback per verificare.",
+  jevNotLanguage: "Non sono frasi nella lingua di questo diario. Controlla il testo.",
 
   jevGrammar: "Possibile problema di grammatica",
   jevVocabulary: "Possibile problema di vocabolario",

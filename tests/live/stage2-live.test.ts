@@ -53,7 +53,7 @@ test.skipIf(process.env.RUN_STAGE2_LIVE !== "1")(
             return callId;
           },
           finish: jevStore.finish,
-        });
+        }, "es");
         const [call] = callId
           ? await db.select().from(jevCalls).where(eq(jevCalls.id, callId))
           : [];
