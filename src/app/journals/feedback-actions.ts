@@ -18,6 +18,7 @@ import { testJevClient } from "../../lib/jev/test-client";
 import { jevStore } from "../../lib/jev/repository";
 import { idSchema } from "../../lib/journal/schemas";
 import { localeSchema } from "../../config/locales";
+import { emptyTrash } from "../../lib/journal/trash";
 import type { ActionResult, EntryDto, FeedbackDto, Locale } from "../../lib/feedback-contract";
 import {
   restoreDeleted,
@@ -133,6 +134,17 @@ export async function restoreDeletedAction(
   try {
     await restoreDeleted(id, kind);
     revalidatePath("/journals", "layout");
+    return { success: true, data: null };
+  } catch {
+    return { success: false, reason: "unknown" };
+  }
+}
+
+export async function emptyTrashAction(): Promise<ActionResult<null>> {
+  try {
+    await emptyTrash();
+    revalidatePath("/journals", "layout");
+    revalidatePath("/trash");
     return { success: true, data: null };
   } catch {
     return { success: false, reason: "unknown" };

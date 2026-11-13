@@ -117,6 +117,15 @@ export async function listEntries(journalId: string): Promise<Entry[]> {
   );
 }
 
+export async function countOccupiedEntrySlots(journalId: string): Promise<number> {
+  const [row] = await db
+    .select({ total: count() })
+    .from(entries)
+    .innerJoin(journals, eq(entries.journalId, journals.id))
+    .where(and(eq(journals.id, idSchema.parse(journalId)), isNull(journals.deletedAt)));
+  return row.total;
+}
+
 export async function getEntry(id: string): Promise<Entry | null> {
   const [row] = await db
     .select({ entry: entries })

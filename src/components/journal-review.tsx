@@ -26,28 +26,30 @@ function LimitMessage({ t }: { t: Dictionary }) {
 }
 
 export function JournalEntryGate({
-  entries,
+  occupiedSlots,
   t,
   children,
 }: {
-  entries: EntryDto[];
+  occupiedSlots: number;
   t: Dictionary;
   children: ReactNode;
 }) {
   // Once admitted, keep this editor mounted through revalidation. Saving the
   // tenth entry must not remove newer unsaved changes. The server still caps creates.
-  const [admitted] = useState(entries.length < LIMITS.entriesPerJournal);
+  const [admitted] = useState(occupiedSlots < LIMITS.entriesPerJournal);
   return admitted ? children : <LimitMessage t={t} />;
 }
 
 export function JournalReview({
   id,
   initialEntries,
+  occupiedSlots,
   locale,
   t,
 }: {
   id: string;
   initialEntries: EntryDto[];
+  occupiedSlots: number;
   locale: Locale;
   t: Dictionary;
 }) {
@@ -55,7 +57,7 @@ export function JournalReview({
   return (
     <>
       <DeletedNotice t={t} />
-      {entries.length >= LIMITS.entriesPerJournal ? (
+      {occupiedSlots >= LIMITS.entriesPerJournal ? (
         <LimitMessage t={t} />
       ) : (
         <JournalLink href={`/journals/${id}/entries/new`} className="journal-new-entry">

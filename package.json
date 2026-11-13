@@ -6,9 +6,9 @@
     "node": ">=24.0.0"
   },
   "scripts": {
-    "dev": "next dev",
+    "dev": "node scripts/next-host.mjs dev",
     "build": "next build",
-    "start": "next start",
+    "start": "node scripts/next-host.mjs start",
     "lint": "eslint . --max-warnings=0",
     "format": "prettier --write .",
     "format:check": "prettier --check .",

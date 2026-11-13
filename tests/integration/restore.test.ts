@@ -14,9 +14,36 @@ import {
   listEntries,
   restoreDeleted,
 } from "../../src/lib/journal";
+import { emptyTrash } from "../../src/lib/journal/trash";
 
 afterAll(async () => {
   await client.end();
+});
+
+test("empty trash removes only current trash and preserves restored sources", async () => {
+  const restored = await createJournal({ language: "en", level: "basic", focus: [] });
+  const trash = await createJournal({ language: "es", level: "basic", focus: [] });
+  try {
+    const entry = await createEntry({ journalId: restored.id, body: "Restore this entry." });
+    const discarded = await createEntry({ journalId: restored.id, body: "Remove this trash." });
+    await deleteEntry(entry.id, "soft");
+    await deleteJournal(restored.id, "soft");
+    await deleteJournal(trash.id, "soft");
+    await restoreDeleted(restored.id, "journal");
+    await restoreDeleted(entry.id, "entry");
+    const newEntry = await createEntry({ journalId: restored.id, body: "Written after restore." });
+    await deleteEntry(discarded.id, "soft");
+    await emptyTrash();
+    expect(await getJournal(restored.id)).not.toBeNull();
+    expect((await listEntries(restored.id)).map((item) => item.id).sort()).toEqual(
+      [entry.id, newEntry.id].sort(),
+    );
+    expect(await db.select().from(entries).where(eq(entries.id, discarded.id))).toEqual([]);
+    expect(await db.select().from(journals).where(eq(journals.id, trash.id))).toEqual([]);
+  } finally {
+    await db.delete(journals).where(eq(journals.id, restored.id));
+    await db.delete(journals).where(eq(journals.id, trash.id));
+  }
 });
 
 test("journal Undo restores its entries while preserving entries already in trash", async () => {

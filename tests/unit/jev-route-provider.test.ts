@@ -26,14 +26,18 @@ beforeEach(() => {
 afterEach(() => vi.unstubAllEnvs());
 
 test.each([
-  ["provider HTTP failure", () => new Response("unavailable", { status: 503 }), "Error"],
-  ["malformed provider JSON", () => new Response("{"), "SyntaxError"],
-  ["null provider JSON", () => Response.json(null), "TypeError"],
-  ["missing answers", () => Response.json({}), "ZodError"],
-  ["invalid answers", () => Response.json({ answers: { main_issue: "spelling" } }), "ZodError"],
+  ["provider HTTP failure", () => new Response("PRIVATE_PROVIDER_SENTINEL", { status: 503 }), 503],
+  ["malformed provider JSON", () => new Response("PRIVATE_PROVIDER_SENTINEL"), 500],
+  ["null provider JSON", () => Response.json(null), 500],
+  ["missing answers", () => Response.json({}), 500],
+  [
+    "invalid answers",
+    () => Response.json({ answers: { main_issue: "PRIVATE_PROVIDER_SENTINEL" } }),
+    500,
+  ],
 ] as const)(
-  "%s returns HTTP 200 with no note and logs a stack",
-  async (_name, reply, errorName) => {
+  "%s returns HTTP 200 with no note and logs only category and status",
+  async (_name, reply, status) => {
     const fetch = vi.fn().mockResolvedValue(reply());
     vi.stubGlobal("fetch", fetch);
     const response = await POST(
@@ -50,15 +54,9 @@ test.each([
     expect(await response.json()).toBeNull();
     expect(fetch).toHaveBeenCalledWith(jevEndpoint, expect.objectContaining({ method: "POST" }));
     expect(jevStore.finish).toHaveBeenCalledWith("call", null, expect.any(Number));
-    expect(console.error).toHaveBeenCalledWith("Jev check failed", {
-      error: expect.objectContaining({ name: errorName }),
-      stack: expect.stringContaining(errorName),
-    });
-    if (_name === "provider HTTP failure") {
-      expect(console.error).toHaveBeenCalledWith("Jev check failed", {
-        error: expect.objectContaining({ message: "Jev request failed (503)" }),
-        stack: expect.stringContaining("Jev request failed (503)"),
-      });
-    }
+    expect(console.error).toHaveBeenCalledWith("jev_check_failed", { status });
+    expect(JSON.stringify(vi.mocked(console.error).mock.calls)).not.toContain(
+      "PRIVATE_PROVIDER_SENTINEL",
+    );
   },
 );

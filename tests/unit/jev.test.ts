@@ -93,13 +93,25 @@ test("daily cap refuses before any provider call", async () => {
 });
 
 test("provider failure is logged server-side and still finishes the call log", async () => {
-  const error = new Error("provider unavailable");
+  const error = new Error("PRIVATE_PROVIDER_SENTINEL");
   const logger = vi.spyOn(console, "error").mockImplementation(() => {});
   const log = store();
   const client = { judge: vi.fn().mockRejectedValue(error) };
   expect(await judgeEntry(text, null, client, log)).toBeNull();
-  expect(logger).toHaveBeenCalledWith("Jev check failed", { error, stack: error.stack });
+  expect(logger).toHaveBeenCalledWith("jev_check_failed", { status: 500 });
+  expect(JSON.stringify(logger.mock.calls)).not.toContain(error.message);
   expect(log.finish).toHaveBeenCalledWith("call", null, expect.any(Number));
+});
+
+test("call-log failures never log private error details", async () => {
+  const logger = vi.spyOn(console, "error").mockImplementation(() => {});
+  const log = {
+    ...store(),
+    finish: vi.fn().mockRejectedValue(new Error("PRIVATE_STORE_SENTINEL")),
+  };
+  expect(await judgeEntry(text, null, { judge: async () => result() }, log)).not.toBeNull();
+  expect(logger).toHaveBeenCalledWith("jev_call_log_failed", { status: 500 });
+  expect(JSON.stringify(logger.mock.calls)).not.toContain("PRIVATE_STORE_SENTINEL");
 });
 test("Jev cannot write explanations or corrected text into its note or log", async () => {
   const raw = { ...result(), explanation: "Untrusted prose", corrected_text: "Do this" };

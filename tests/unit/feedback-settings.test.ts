@@ -129,7 +129,7 @@ test("repair carries the settings snapshot and task register unchanged", async (
     .fn()
     .mockResolvedValueOnce({ text: "{}", inputTokens: 1, outputTokens: 1 })
     .mockResolvedValueOnce({
-      text: JSON.stringify({ corrected_text: "I went home.", corrections: [] }),
+      text: JSON.stringify({ corrected_text: job.input.analysedText, corrections: [] }),
       inputTokens: 1,
       outputTokens: 1,
     });

@@ -408,13 +408,60 @@ test("language refusal persists failure, costs one Jev call and releases the unu
     reason: "not_language_text",
     locale: "it",
   });
-  expect(await db.select().from(modelCalls)).toEqual([]);
+  expect(await db.select().from(modelCalls)).toMatchObject([
+    { id: job.callId, outcome: "cancelled" },
+  ]);
   const calls = await db.select().from(jevCalls).where(eq(jevCalls.entryId, entry.id));
   expect(calls).toHaveLength(1);
   expect(calls[0].confidence).toBe(0.99);
   expect(calls[0].answers).toMatchObject({ text_kind: { choice: "encoded" } });
   const [record] = await db.select().from(feedback).where(eq(feedback.id, job.id));
   expect(record.attempts).toBe(0);
+});
+
+test("language refusals do not spend any of the three lifetime feedback requests", async () => {
+  const { entry } = await fixture();
+  for (let i = 0; i < 4; i++) {
+    const refused = await beginFeedback(entry.id, "en");
+    await refuseNonLanguageFeedback(refused);
+  }
+  for (let i = 0; i < 3; i++) {
+    const job = await beginFeedback(entry.id, "en");
+    await runFeedback(job, feedbackStore, fake);
+  }
+  expect(fake.generate).toHaveBeenCalledTimes(3);
+  await expect(beginFeedback(entry.id, "en")).rejects.toMatchObject({
+    reason: "entry_limit_reached",
+  });
+});
+
+test("only unused cancelled reservations free daily capacity, while metering remains", async () => {
+  const { journal, entry } = await fixture();
+  const seed = await beginFeedback(entry.id, "en");
+  await db.insert(modelCalls).values(
+    Array.from({ length: 48 }, () => ({
+      feedbackId: seed.id,
+      entryId: entry.id,
+      kind: "retry" as const,
+      outcome: "failed" as const,
+    })),
+  );
+  const refused = await beginFeedback(entry.id, "en");
+  await refuseNonLanguageFeedback(refused);
+  const replacement = await beginFeedback(entry.id, "en");
+  expect(await feedbackStore.claim(replacement.callId)).toBe(true);
+  await refuseNonLanguageFeedback(replacement);
+  expect(
+    await db.select().from(modelCalls).where(eq(modelCalls.id, replacement.callId)),
+  ).toMatchObject([{ outcome: "running" }]);
+  expect(
+    (await db.select().from(feedback).where(eq(feedback.id, replacement.id)))[0],
+  ).toMatchObject({ status: "pending", attempts: 1 });
+  const other = await createEntry({ journalId: journal.id, body: "Another entry." });
+  await expect(beginFeedback(other.id, "en")).rejects.toMatchObject({
+    reason: "daily_cap_reached",
+  });
+  expect(await db.select().from(modelCalls)).toHaveLength(51);
 });
 
 test("a language refusal cannot erase a model call that has already started", async () => {
