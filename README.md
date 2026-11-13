@@ -2,7 +2,7 @@
 
 A personal writing journal for learning English, Spanish or Italian. You write a short entry, get a corrected version with up to three explained corrections, and reopen the entry later. Built as a single-user, local-first app in Next.js, Postgres and the OpenAI API.
 
-Video walkthrough (about six minutes): [watch on Google Drive](https://drive.google.com/file/d/1fgaPH_7YSD6sgUm_6iWj3I9vYD9bJiTS/view?usp=sharing)
+Video walkthrough: [watch on Google Drive](https://drive.google.com/file/d/1fgaPH_7YSD6sgUm_6iWj3I9vYD9bJiTS/view?usp=sharing)
 
 Status: working locally for one learner. It has no login and is not meant for public deployment (see [Limits](#limits)).
 
