@@ -85,11 +85,7 @@ export async function summariseJournal(
         .where(eq(journals.id, journalId))
         .for("update");
       if (!journal || journal.deletedAt) throw new Error("Journal unavailable");
-      await tx
-        .update(journalInsights)
-        .set({ summary: result.text })
-        .where(eq(journalInsights.id, reservation.insightId));
-      await tx
+      const permitted = await tx
         .update(modelCalls)
         .set({
           outcome: "ready",
@@ -97,7 +93,13 @@ export async function summariseJournal(
           inputTokens: result.inputTokens,
           outputTokens: result.outputTokens,
         })
-        .where(eq(modelCalls.id, reservation.callId));
+        .where(and(eq(modelCalls.id, reservation.callId), eq(modelCalls.outcome, "running")))
+        .returning({ id: modelCalls.id });
+      if (!permitted.length) throw new Error("Summary source changed");
+      await tx
+        .update(journalInsights)
+        .set({ summary: result.text })
+        .where(eq(journalInsights.id, reservation.insightId));
     });
     return { summary: result.text };
   } catch {

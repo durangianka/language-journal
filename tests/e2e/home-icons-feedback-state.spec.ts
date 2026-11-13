@@ -88,7 +88,9 @@ for (const width of [375, 1280]) {
         await page.getByRole("button", { name: t.saveEntry, exact: true }).click();
         await expect(page.getByText(t.feedbackOutdated, { exact: true })).toBeVisible();
         await page.getByRole("tab", { name: t.originalText, exact: true }).click();
-        await expect(page.getByText(`${body} I enjoy learning.`, { exact: true })).toBeVisible();
+        await expect(page.getByText(body, { exact: true })).toBeVisible();
+        const [saved] = await sql`select body from entries where id = ${entryId ?? ""}`;
+        expect(saved.body).toBe(`${body} I enjoy learning.`);
         await page.getByRole("link", { name: t.home, exact: true }).click();
         await expect(card).toContainText(`${t.entries}: 1`);
         await expect(card.locator("time")).toHaveCount(1);

@@ -47,11 +47,13 @@ export function EntryFeedback({
   const router = useRouter();
   const [pending, setPending] = useState(false);
   const [state, setState] = useState(() => feedbackScreenState(entry.latestFeedback));
+  const [lastSuccess, setLastSuccess] = useState(entry.latestSuccessfulFeedback);
   const {
     feedback,
     status,
     reason: reasonCode,
   } = pending ? feedbackScreenState(state.feedback, true) : state;
+  const successful = feedback?.status === "ready" ? feedback : lastSuccess;
   const reason =
     reasonCode && reasonCode !== "validation" && reasonCode !== "unknown"
       ? t[reasonCode]
@@ -70,6 +72,7 @@ export function EntryFeedback({
           return;
         }
         setState(feedbackScreenState(current.latestFeedback));
+        setLastSuccess(current.latestSuccessfulFeedback);
         if (current.latestFeedback?.status === "pending") timer = setTimeout(poll, 1000);
         else router.refresh();
       } catch {
@@ -91,7 +94,10 @@ export function EntryFeedback({
       if (state.feedback?.status === "pending") {
         const current = await getEntry(entry.id);
         if (!current) router.refresh();
-        else setState(feedbackScreenState(current.latestFeedback));
+        else {
+          setState(feedbackScreenState(current.latestFeedback));
+          setLastSuccess(current.latestSuccessfulFeedback);
+        }
       } else {
         const result = await requestFeedback(entry.id, locale);
         setState((previous) => feedbackResultState(result, previous.feedback));
@@ -133,7 +139,12 @@ export function EntryFeedback({
           </time>
         </p>
       )}
-      {feedback && new Date(entry.updatedAt) > new Date(feedback.createdAt) && (
+      {successful && successful.id !== feedback?.id && (
+        <p role="note" className="text-sm text-muted-foreground">
+          {t.feedbackPreviousSuccess}
+        </p>
+      )}
+      {successful && entry.body !== successful.analysedText && (
         <p role="note" className="text-sm text-muted-foreground">
           {t.feedbackOutdated}
         </p>
@@ -155,14 +166,14 @@ export function EntryFeedback({
           <TabsContent value="corrected">
             <Card>
               <CardContent>
-                {status === "ready" && feedback ? (
+                {successful ? (
                   <p
                     lang={language}
                     className="journal-prose break-words whitespace-pre-wrap [overflow-wrap:anywhere]"
                   >
                     <CorrectedProse
-                      text={feedback.correctedText ?? ""}
-                      corrections={feedback.corrections}
+                      text={successful.correctedText ?? ""}
+                      corrections={successful.corrections}
                     />
                   </p>
                 ) : status === "pending" ? (
@@ -182,14 +193,14 @@ export function EntryFeedback({
                   lang={language}
                   className="journal-prose break-words whitespace-pre-wrap [overflow-wrap:anywhere]"
                 >
-                  {entry.body}
+                  {successful?.analysedText ?? entry.body}
                 </p>
               </CardContent>
             </Card>
           </TabsContent>
         </Tabs>
         <aside className="min-w-0" aria-label={t.correctionsHeading}>
-          {status === "pending" && (
+          {status === "pending" && !successful && (
             <div>
               <h3 className="mb-2 font-semibold">{t.correctionsHeading}</h3>
               <div className="rounded-xl border p-4">
@@ -197,17 +208,16 @@ export function EntryFeedback({
               </div>
             </div>
           )}
-          {status === "ready" &&
-            feedback &&
-            (feedback.corrections.length === 0 ? (
+          {successful &&
+            (successful.corrections.length === 0 ? (
               <p role="note" className="rounded-lg border p-4">
                 {t.noCorrections}
               </p>
             ) : (
               <div>
                 <h3 className="mb-2 font-semibold">{t.correctionsHeading}</h3>
-                <Accordion key={feedback.id} defaultValue={["correction-0"]} className="gap-3">
-                  {feedback.corrections
+                <Accordion key={successful.id} defaultValue={["correction-0"]} className="gap-3">
+                  {successful.corrections
                     .slice(0, LIMITS.correctionsPerFeedback)
                     .map((correction, index) => {
                       const CategoryIcon = categoryIcons[correction.category];
@@ -236,7 +246,7 @@ export function EntryFeedback({
                           <AccordionContent>
                             <dl className="flex flex-col gap-2 break-words text-base [overflow-wrap:anywhere]">
                               <dt className="font-semibold">{t.explanation}</dt>
-                              <dd lang={feedback.locale}>{correction.explanation}</dd>
+                              <dd lang={successful.locale}>{correction.explanation}</dd>
                             </dl>
                           </AccordionContent>
                         </AccordionItem>

@@ -32,6 +32,7 @@ import {
   listEntries,
   listJournals,
   updateEntry,
+  restoreDeleted,
 } from "../../src/lib/journal";
 
 const journalIds: string[] = [];
@@ -87,6 +88,7 @@ test("snapshot, pending and ready DTOs, history, counters, duplicate delivery an
   });
   const edited = await updateEntry(entry.id, { journalId: journal.id, body: "Hoy escribo." });
   expect(edited?.body).toBe("Hoy escribo.");
+  expect(edited?.latestFeedback).toMatchObject({ id: job.id, analysedText: entry.body });
   await runFeedback(job, feedbackStore, fake);
   const latest = (await getEntry(entry.id))?.latestFeedback;
   expect(latest).toMatchObject({
@@ -95,7 +97,7 @@ test("snapshot, pending and ready DTOs, history, counters, duplicate delivery an
     correctedText: output.corrected_text,
     corrections: output.corrections,
   });
-  expect(latest).not.toHaveProperty("analysedText");
+  expect(latest).toHaveProperty("analysedText", entry.body);
   expect((await listEntries(journal.id))[0].latestFeedback).toEqual(latest);
   const [saved] = await db.select().from(feedback).where(eq(feedback.id, job.id));
   expect(saved.analysedText).toBe(entry.body);
@@ -265,6 +267,105 @@ test("deleting before background processing prevents sending hidden text", async
   await deleteEntry(entry.id, "soft");
   await runFeedback(job, feedbackStore, fake);
   expect(fake.generate).not.toHaveBeenCalled();
+  await restoreDeleted(entry.id, "entry");
+  expect((await getEntry(entry.id))?.latestFeedback).toMatchObject({ status: "failed" });
+  await runFeedback(await beginFeedback(entry.id, "en"), feedbackStore, fake);
+  expect((await getEntry(entry.id))?.latestFeedback?.status).toBe("ready");
+});
+
+test("abandoned pending jobs expire on reads and allow a bounded retry after restart", async () => {
+  const { journal, entry } = await fixture();
+  const job = await beginFeedback(entry.id, "en");
+  await db
+    .update(feedback)
+    .set({ createdAt: new Date(Date.now() - 121_000) })
+    .where(eq(feedback.id, job.id));
+  expect((await listEntries(journal.id))[0].latestFeedback).toMatchObject({
+    status: "failed",
+    reason: "timeout",
+  });
+  const [call] = await db.select().from(modelCalls).where(eq(modelCalls.id, job.callId));
+  expect(call).toMatchObject({ outcome: "failed", reasonCode: "timeout" });
+  await runFeedback(job, feedbackStore, fake);
+  expect(fake.generate).not.toHaveBeenCalled();
+  const retry = await beginFeedback(entry.id, "en");
+  await runFeedback(retry, feedbackStore, fake);
+  expect((await getEntry(entry.id))?.latestFeedback?.status).toBe("ready");
+  expect(await listFeedback(entry.id)).toHaveLength(2);
+});
+
+test("a failed later attempt retains the successful feedback and its matching snapshot", async () => {
+  const { journal, entry } = await fixture();
+  const first = await beginFeedback(entry.id, "en");
+  await runFeedback(first, feedbackStore, fake);
+  await updateEntry(entry.id, { journalId: journal.id, body: "Hoy escribo algo distinto." });
+  const retry = await beginFeedback(entry.id, "it");
+  await runFeedback(retry, feedbackStore, {
+    generate: async () => {
+      throw new Error("unavailable");
+    },
+  });
+  const current = await getEntry(entry.id);
+  expect(current).toMatchObject({
+    body: "Hoy escribo algo distinto.",
+    latestFeedback: { id: retry.id, status: "failed" },
+    latestSuccessfulFeedback: {
+      id: first.id,
+      status: "ready",
+      analysedText: entry.body,
+      correctedText: output.corrected_text,
+    },
+  });
+  expect((await listEntries(journal.id))[0]).toEqual(current);
+});
+
+test("delete and immediate restore settle pending feedback even without a background callback", async () => {
+  const { entry } = await fixture();
+  await beginFeedback(entry.id, "en");
+  await deleteEntry(entry.id, "soft");
+  await restoreDeleted(entry.id, "entry");
+  expect((await getEntry(entry.id))?.latestFeedback).toMatchObject({
+    status: "failed",
+    reason: "provider_error",
+  });
+});
+
+test("an expired running job cannot publish late output or spend another model call", async () => {
+  const { entry } = await fixture();
+  const job = await beginFeedback(entry.id, "en");
+  let finish!: (value: { text: string; inputTokens: number; outputTokens: number }) => void;
+  let started!: () => void;
+  const begun = new Promise<void>((resolve) => {
+    started = resolve;
+  });
+  const running = runFeedback(job, feedbackStore, {
+    generate: async () => {
+      started();
+      return new Promise((resolve) => {
+        finish = resolve;
+      });
+    },
+  });
+  await begun;
+  await db
+    .update(feedback)
+    .set({ createdAt: new Date(Date.now() - 121_000) })
+    .where(eq(feedback.id, job.id));
+  expect((await getEntry(entry.id))?.latestFeedback).toMatchObject({
+    status: "failed",
+    reason: "timeout",
+  });
+  finish({ text: JSON.stringify(output), inputTokens: 10, outputTokens: 20 });
+  await running;
+  expect((await getEntry(entry.id))?.latestFeedback).toMatchObject({
+    status: "failed",
+    reason: "timeout",
+    correctedText: null,
+  });
+  expect(await db.select().from(modelCalls)).toHaveLength(1);
+  expect(await db.select().from(modelCalls)).toMatchObject([
+    { outcome: "failed", reasonCode: "timeout", inputTokens: 10, outputTokens: 20 },
+  ]);
 });
 
 test("language refusal persists failure, costs one Jev call and releases the unused model slot", async () => {

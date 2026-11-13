@@ -130,9 +130,11 @@ The [output validator](src/lib/ai/schema.ts) checks JSON, a strict Zod object, s
 Corrected text must be nonblank, each nonempty fix must appear in it, and zero corrections require corrected text to equal the analysed text. Empty fixes represent deletions.
 These checks do not prove pedagogical correctness. The SDK adapter requests `store: false`; this flag alone does not establish the provider's complete retention policy.
 
-There is a 20-second generation timeout, at most one SDK retry and one validation repair, with at most three metered calls per feedback request.
+There is a 20-second generation timeout and a 4,096-output-token budget per model call, at most one SDK retry and one validation repair, with at most three metered calls per feedback request.
 Each extra call needs a daily-budget reservation. Token counts are recorded when available; failures can have null counts.
 Work runs after the action response through Next.js `after`, and the entry screen polls the persisted state.
+
+Pending feedback has a persisted two-minute deadline. The next read, request or completion marks expired work failed, including after a server restart, while retaining metered usage and the existing retry caps. The latest successful feedback and its analysed writing snapshot stay visible alongside a later failed attempt.
 
 | State or reason       | Meaning                                                         |
 | --------------------- | --------------------------------------------------------------- |
@@ -154,6 +156,8 @@ Jev has two roles. While writing, blur or a 2.5-second typing pause requests a m
 Text shorter than eight trimmed characters and unchanged drafts are skipped. A low-confidence issue becomes `uncertain`; missing or failed checks return no note and do not block saving.
 This judgement makes no OpenAI call. Its severity answer is logged; the badge uses the main issue.
 
+Live checks are on by default. The **Live checks** switch beside each editor stops automatic checks, cancels a waiting check and ignores results already in flight. Draft text is sent to Jev when configured; a request already sent cannot be recalled by switching checks off or discarding a draft. Saved-entry feedback still runs its separate Jev language gate when live checks are off.
+
 Before saved text reaches the feedback model, a separate Jev question classifies its meaning in the target language.
 Standard, informal and meaningful mixed text pass. Formula-only, encoded, random and other-language text are refused when classification confidence is at least 0.5.
 The unused model reservation is marked `cancelled` and kept for audit, outside the daily model budget. A refusal with zero model attempts does not occupy a feedback request slot.
@@ -171,6 +175,8 @@ An explicit summary action sends up to ten latest visible entries to `gpt-6-luna
 It shares the daily model budget. There is one reservation per journal per London day across all locales; failure also consumes that daily opportunity.
 The summary provider checks completion, nonblank text and a 2,000-character bound, with a 20-second timeout and no retries.
 The three-sentence and language requirements are prompt instructions, without the feedback validator's language check.
+
+Entry changes and source deletion invalidate stored summaries in the same transaction under the journal lock. They also revoke completion of an in-flight summary, so stale output cannot reappear after an edit or restore. Invalidation retains the daily summary reservation and metered usage.
 
 The Jev pilot supplies an independent quick judgement and the language gate. It does not produce explained corrections.
 Recorded live samples are in [Stage 2 results](docs/stage2-live-results.md) and [language-gate results](docs/jev-gate-live-results.md).

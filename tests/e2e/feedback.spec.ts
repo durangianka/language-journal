@@ -33,6 +33,7 @@ test.beforeEach(async () => {
         createdAt: "2026-11-10T12:00:00.000Z",
         updatedAt: "2026-11-10T12:00:00.000Z",
         latestFeedback: null,
+        latestSuccessfulFeedback: null,
       });
     }
   } finally {
@@ -60,6 +61,7 @@ function feedback(status: FeedbackDto["status"] = "ready"): FeedbackDto {
     reason: null,
     locale: "en",
     correctedText: "I go to school.",
+    analysedText: "I goes to school.",
     corrections: [],
     createdAt: "2026-11-10T12:00:00.000Z",
   };

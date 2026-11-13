@@ -68,6 +68,7 @@ export interface FeedbackDto {
   reason: FeedbackReason | null;
   locale: Locale;
   correctedText: string | null;
+  analysedText: string;
   corrections: Correction[];
   createdAt: string; // ISO
 }
@@ -80,6 +81,7 @@ export interface EntryDto {
   createdAt: string;
   updatedAt: string;
   latestFeedback: FeedbackDto | null;
+  latestSuccessfulFeedback: FeedbackDto | null;
 }
 
 export type ActionResult<T> =

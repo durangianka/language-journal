@@ -38,9 +38,56 @@ export function toFeedbackDto(row: typeof feedback.$inferSelect): FeedbackDto {
     reason: row.reasonCode,
     locale: row.locale,
     correctedText: row.correctedText,
+    analysedText: row.analysedText,
     corrections: row.corrections ?? [],
     createdAt: row.createdAt.toISOString(),
   };
+}
+
+const pastDeadline = sql`${feedback.createdAt} <= clock_timestamp() - interval '2 minutes'`;
+
+export async function failPendingFeedback(tx: Transaction, entryIds: string[]) {
+  if (!entryIds.length) return;
+  const stopped = await tx
+    .update(feedback)
+    .set({ status: "failed", reasonCode: "provider_error", updatedAt: new Date() })
+    .where(and(inArray(feedback.entryId, entryIds), eq(feedback.status, "pending")))
+    .returning({ id: feedback.id });
+  if (stopped.length)
+    await tx
+      .update(modelCalls)
+      .set({ outcome: "failed", reasonCode: "provider_error" })
+      .where(
+        and(
+          inArray(
+            modelCalls.feedbackId,
+            stopped.map((row) => row.id),
+          ),
+          inArray(modelCalls.outcome, ["reserved", "running"]),
+        ),
+      );
+}
+
+// Use the persisted creation time, not a process-local timer, so restarts recover too.
+async function expireFeedback(tx: Transaction, entryIds: string[]) {
+  const expired = await tx
+    .update(feedback)
+    .set({ status: "failed", reasonCode: "timeout", updatedAt: new Date() })
+    .where(and(inArray(feedback.entryId, entryIds), eq(feedback.status, "pending"), pastDeadline))
+    .returning({ id: feedback.id });
+  if (expired.length)
+    await tx
+      .update(modelCalls)
+      .set({ outcome: "failed", reasonCode: "timeout" })
+      .where(
+        and(
+          inArray(
+            modelCalls.feedbackId,
+            expired.map((row) => row.id),
+          ),
+          inArray(modelCalls.outcome, ["reserved", "running"]),
+        ),
+      );
 }
 
 export async function beginFeedback(
@@ -66,6 +113,7 @@ export async function beginFeedback(
       .where(and(eq(entries.id, entryId), isNull(entries.deletedAt)))
       .for("update");
     if (!journal || !entry) throw new FeedbackRequestError("validation");
+    await expireFeedback(tx, [entryId]);
     const profile = createJournalSchema.parse({
       language: journal.language,
       level: journal.level,
@@ -143,6 +191,9 @@ export async function refuseNonLanguageFeedback(job: FeedbackJob) {
 
 export const feedbackStore: FeedbackStore = {
   async claim(callId) {
+    const [call] = await db.select().from(modelCalls).where(eq(modelCalls.id, callId));
+    if (!call?.entryId || !call.feedbackId) return false;
+    await db.transaction(async (tx) => expireFeedback(tx, [call.entryId!]));
     const rows = await db
       .update(modelCalls)
       .set({ outcome: "running" })
@@ -152,15 +203,29 @@ export const feedbackStore: FeedbackStore = {
           eq(modelCalls.outcome, "reserved"),
           sql`exists (
       select 1 from ${entries} inner join ${journals} on ${entries.journalId} = ${journals.id}
+      inner join ${feedback} on ${feedback.id} = ${modelCalls.feedbackId}
       where ${entries.id} = ${modelCalls.entryId} and ${entries.deletedAt} is null and ${journals.deletedAt} is null
+      and ${feedback.status} = 'pending' and not (${pastDeadline})
     )`,
         ),
       )
       .returning({ id: modelCalls.id });
+    if (!rows.length) {
+      // A skipped deleted source must not turn back into a pending job on restore.
+      const [active] = await db
+        .select({ id: entries.id })
+        .from(entries)
+        .innerJoin(journals, eq(entries.journalId, journals.id))
+        .where(
+          and(eq(entries.id, call.entryId), isNull(entries.deletedAt), isNull(journals.deletedAt)),
+        );
+      if (!active) await feedbackStore.failed(call.feedbackId, "provider_error");
+    }
     return rows.length === 1;
   },
   async reserve(job, kind) {
     return db.transaction(async (tx) => {
+      await expireFeedback(tx, [job.entryId]);
       const [record] = await tx
         .select()
         .from(feedback)
@@ -179,16 +244,28 @@ export const feedbackStore: FeedbackStore = {
     });
   },
   async log(callId, log) {
-    await db.update(modelCalls).set(log).where(eq(modelCalls.id, callId));
+    await db
+      .update(modelCalls)
+      .set({
+        ...log,
+        outcome: sql`case when ${modelCalls.outcome} = 'failed' then ${modelCalls.outcome} else ${log.outcome} end`,
+        reasonCode: sql`case when ${modelCalls.outcome} = 'failed' then ${modelCalls.reasonCode} else ${log.reasonCode} end`,
+      })
+      .where(eq(modelCalls.id, callId));
   },
   async ready(job, output) {
     await db.transaction(async (tx) => {
       // Same lock order as deletion, so counters cannot race with hard deletion.
-      await tx
+      const [journal] = await tx
         .select({ id: journals.id })
         .from(journals)
-        .where(eq(journals.id, job.journalId))
+        .where(and(eq(journals.id, job.journalId), isNull(journals.deletedAt)))
         .for("update");
+      if (!journal) {
+        await feedbackStore.failed(job.id, "provider_error");
+        return;
+      }
+      await expireFeedback(tx, [job.entryId]);
       const rows = await tx
         .update(feedback)
         .set({
@@ -205,15 +282,29 @@ export const feedbackStore: FeedbackStore = {
     });
   },
   async failed(id, reason) {
-    await db
-      .update(feedback)
-      .set({ status: "failed", reasonCode: reason, updatedAt: new Date() })
-      .where(and(eq(feedback.id, id), eq(feedback.status, "pending")));
+    await db.transaction(async (tx) => {
+      const rows = await tx
+        .update(feedback)
+        .set({ status: "failed", reasonCode: reason, updatedAt: new Date() })
+        .where(and(eq(feedback.id, id), eq(feedback.status, "pending")))
+        .returning({ id: feedback.id });
+      if (rows.length)
+        await tx
+          .update(modelCalls)
+          .set({ outcome: "failed", reasonCode: reason })
+          .where(
+            and(
+              eq(modelCalls.feedbackId, id),
+              inArray(modelCalls.outcome, ["reserved", "running"]),
+            ),
+          );
+    });
   },
 };
 
 export async function listFeedback(entryId: string) {
   idSchema.parse(entryId);
+  await db.transaction(async (tx) => expireFeedback(tx, [entryId]));
   const rows = await db
     .select({ feedback })
     .from(feedback)
@@ -229,8 +320,9 @@ export async function latestFeedback(entryId: string) {
 }
 
 export async function latestFeedbackForEntries(entryIds: string[]) {
-  const result = new Map<string, FeedbackDto>();
+  const result = new Map<string, { latest: FeedbackDto; successful: FeedbackDto | null }>();
   if (!entryIds.length) return result;
+  await db.transaction(async (tx) => expireFeedback(tx, entryIds));
   const rows = await db
     .select({ feedback })
     .from(feedback)
@@ -240,7 +332,15 @@ export async function latestFeedbackForEntries(entryIds: string[]) {
       and(inArray(entries.id, entryIds), isNull(entries.deletedAt), isNull(journals.deletedAt)),
     )
     .orderBy(desc(feedback.createdAt), desc(feedback.id));
-  for (const { feedback: row } of rows)
-    if (!result.has(row.entryId)) result.set(row.entryId, toFeedbackDto(row));
+  for (const { feedback: row } of rows) {
+    const previous = result.get(row.entryId);
+    if (!previous)
+      result.set(row.entryId, {
+        latest: toFeedbackDto(row),
+        successful: row.status === "ready" ? toFeedbackDto(row) : null,
+      });
+    else if (!previous.successful && row.status === "ready")
+      previous.successful = toFeedbackDto(row);
+  }
   return result;
 }

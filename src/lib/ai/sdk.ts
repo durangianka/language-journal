@@ -47,6 +47,8 @@ export function createFeedbackProvider(
             } satisfies OpenAILanguageModelResponsesOptions,
           },
           maxRetries: options?.maxRetries ?? 1,
+          // Enough for the 2,000-character entry and three short corrections, including JSON.
+          maxOutputTokens: 4096,
           abortSignal,
         });
         return {

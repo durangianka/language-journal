@@ -210,6 +210,26 @@ test("incomplete output enters repair even when its JSON is valid", async () => 
   expect(db.ready).toHaveBeenCalledWith(job, good);
 });
 
+test("output token budget applies to truncated analysis and its single repair", async () => {
+  const model = new MockLanguageModelV4({
+    doGenerate: {
+      ...response('{"corrected_text":"Hel'),
+      finishReason: { unified: "length", raw: undefined },
+    },
+  });
+  const db = store();
+  await runFeedback(job, db, createFeedbackProvider(model));
+  expect(model.doGenerateCalls).toHaveLength(2);
+  for (const call of model.doGenerateCalls) expect(call.maxOutputTokens).toBe(4096);
+  expect(db.reserve).toHaveBeenCalledExactlyOnceWith(job, "repair");
+  expect(db.log).toHaveBeenCalledWith(
+    "initial",
+    expect.objectContaining({ reasonCode: "invalid_output" }),
+  );
+  expect(db.failed).toHaveBeenCalledWith(job.id, "invalid_output");
+  expect(db.ready).not.toHaveBeenCalled();
+});
+
 test("one retry plus one repair permits at most three metered model calls", async () => {
   let calls = 0;
   const model = new MockLanguageModelV4({

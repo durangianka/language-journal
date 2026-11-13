@@ -63,6 +63,13 @@ export function EntryForm({
   }, []);
   const requestedDate = useSearchParams().get("date");
   const [body, setBody] = useState(initialEntry?.body ?? "");
+  const [savedEntryId, setSavedEntryId] = useState(initialEntry?.id ?? null);
+  const [savedSnapshot, setSavedSnapshot] = useState({
+    body: initialEntry?.body ?? "",
+    entryDate: initialEntry?.entryDate ?? "",
+  });
+  const [retainedChanges, setRetainedChanges] = useState(false);
+  const [liveChecks, setLiveChecks] = useState(true);
   const [judgement, setJudgement] = useState<JevNote | null>(null);
   const [checking, setChecking] = useState(false);
   const revision = useRef(0);
@@ -104,14 +111,29 @@ export function EntryForm({
   );
   const entryDate = selectedDate ?? localToday;
   const allowLeave = useUnsavedWriting(
-    body !== (initialEntry?.body ?? "") ||
-      (Boolean(initialEntry) && entryDate !== initialEntry?.entryDate),
+    body !== savedSnapshot.body || (Boolean(savedEntryId) && entryDate !== savedSnapshot.entryDate),
     t.unsavedChanges,
   );
   const [state, action, pending] = useActionState<ActionResult | null, FormData>(
     async (_previous, form) => {
-      const result = await (initialEntry ? updateEntryAction(form) : createEntryAction(form));
+      const snapshot = { body: String(form.get("body")), entryDate: String(form.get("entryDate")) };
+      const result = await (form.has("entryId")
+        ? updateEntryAction(form)
+        : createEntryAction(form));
       if (result.success) {
+        setSavedEntryId(result.id);
+        setSavedSnapshot(snapshot);
+        const current = formRef.current ? new FormData(formRef.current) : null;
+        if (
+          current &&
+          (current.get("body") !== snapshot.body || current.get("entryDate") !== snapshot.entryDate)
+        ) {
+          // The response belongs to the submitted snapshot. Keep subsequent edits
+          // and save them to the same entry next time, including after a first save.
+          setRetainedChanges(true);
+          return result;
+        }
+        setRetainedChanges(false);
         allowLeave();
         if (initialEntry) {
           router.refresh();
@@ -136,7 +158,7 @@ export function EntryForm({
   return (
     <form ref={formRef} action={action} className="writing-form flex min-h-0 flex-1 flex-col gap-2">
       <input type="hidden" name="journalId" value={journalId} />
-      {initialEntry && <input type="hidden" name="entryId" value={initialEntry.id} />}
+      {savedEntryId && <input type="hidden" name="entryId" value={savedEntryId} />}
       <div className="grid grid-cols-[auto_1fr] items-center gap-3">
         <label
           id={`${fieldId("entry-date")}-label`}
@@ -164,6 +186,30 @@ export function EntryForm({
           <JevStatusBadge checking={checking} judgement={judgement} t={t} />
         </div>
       </div>
+      <div className="flex shrink-0 flex-wrap items-center gap-2 text-sm text-muted-foreground">
+        <Button
+          type="button"
+          role="switch"
+          aria-checked={liveChecks}
+          aria-describedby={fieldId("live-check-disclosure")}
+          variant="outline"
+          className="min-h-11 min-w-11"
+          // Do not trigger the editor's blur check while switching checks off.
+          onPointerDown={(event) => event.preventDefault()}
+          onClick={() => {
+            setLiveChecks(!liveChecks);
+            clearJevPause(checkSchedule.current);
+            checkSchedule.current.lastText = null;
+            revision.current += 1;
+            setJudgement(null);
+            setChecking(false);
+          }}
+        >
+          <span aria-hidden="true">{liveChecks ? "✓" : "○"}</span>
+          {t.liveChecks}
+        </Button>
+        <p id={fieldId("live-check-disclosure")}>{t.liveCheckDisclosure}</p>
+      </div>
       <Textarea
         id={fieldId("entry-body")}
         name="body"
@@ -178,13 +224,17 @@ export function EntryForm({
           setChecking(false);
           const text = Array.from(event.target.value).slice(0, 2000).join("");
           setBody(text);
-          scheduleJevPause(checkSchedule.current, text, (value) => void judgeText(value));
+          if (liveChecks)
+            scheduleJevPause(checkSchedule.current, text, (value) => void judgeText(value));
         }}
-        onBlur={() => checkJevText(checkSchedule.current, body, (value) => void judgeText(value))}
+        onBlur={() => {
+          if (liveChecks)
+            checkJevText(checkSchedule.current, body, (value) => void judgeText(value));
+        }}
         required
         autoFocus={Boolean(initialEntry)}
         aria-invalid={Boolean(errors.body)}
-        aria-describedby={`${fieldId("character-count")} ${fieldId("body-error")} ${fieldId("jev-note")}`}
+        aria-describedby={`${fieldId("character-count")} ${fieldId("body-error")} ${fieldId("jev-note")} ${fieldId("live-check-disclosure")}`}
       />
       <div className="flex flex-wrap justify-between gap-2 text-sm text-muted-foreground">
         <p>
@@ -197,6 +247,11 @@ export function EntryForm({
       <FieldError id={fieldId("body-error")} error={errors.body} t={t} />
       <FieldError id={fieldId("journal-error")} error={errors.journalId} t={t} />
       <FieldError id={fieldId("form-error")} error={errors.form} t={t} />
+      {retainedChanges && (
+        <p role="status" className="text-sm text-muted-foreground">
+          {t.snapshotSaved}
+        </p>
+      )}
       <div className="writing-save flex shrink-0 flex-col gap-2 bg-background py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
         <div className="flex gap-3">
           {onCancel && (
