@@ -69,6 +69,7 @@ export const es = {
   jevDetails: "Obtén comentarios para ver la corrección",
   journalInsight: "Análisis del diario",
   insightTopCategory: "La mayoría de los errores de este diario son de {category}.",
+  insightTied: "Tus errores principales están empatados en este diario: {categories}.",
   insightNoMistakes: "Tu análisis aparece después de 5 correcciones ({count} de 5).",
   insightCountsHeading: "Errores hasta ahora en este diario",
   insightCountsScope:

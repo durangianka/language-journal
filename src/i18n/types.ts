@@ -61,6 +61,7 @@ export type Dictionary = {
   jevDetails: string;
   journalInsight: string;
   insightTopCategory: string;
+  insightTied: string;
   insightNoMistakes: string;
   insightCountsHeading: string;
   insightCountsScope: string;
