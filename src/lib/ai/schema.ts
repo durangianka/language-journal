@@ -6,7 +6,7 @@ import { LIMITS } from "../feedback-contract";
 
 const boundedText = (max: number) => z.string().refine((v) => Array.from(v).length <= max);
 export const feedbackOutputSchema = z.strictObject({
-  corrected_text: boundedText(LIMITS.entryMaxChars),
+  corrected_text: boundedText(LIMITS.entryMaxChars).refine((v) => v.trim().length > 0),
   corrections: z
     .array(
       z.strictObject({
@@ -43,9 +43,14 @@ export function validateFeedback(
   }
   const parsed = feedbackOutputSchema.safeParse(json);
   if (!parsed.success) throw new InvalidFeedback("invalid_schema");
+  if (!parsed.data.corrections.length && parsed.data.corrected_text !== analysedText)
+    throw new InvalidFeedback("invalid_schema");
   for (const correction of parsed.data.corrections) {
     // Exact substring, including case, whitespace and accents. Repeated spans are valid.
     if (!analysedText.includes(correction.original)) throw new InvalidFeedback("invalid_span");
+    // Empty fixes represent deletions. Other fixes must appear in the corrected version.
+    if (correction.fix && !parsed.data.corrected_text.includes(correction.fix))
+      throw new InvalidFeedback("invalid_span");
     const detected = eld.detect(correction.explanation);
     // Ambiguous or unrecognisable explanations fail closed and enter the repair path.
     if (detected.language !== locale || !detected.isReliable())

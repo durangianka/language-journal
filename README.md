@@ -6,7 +6,7 @@ The implementation also includes editing, a calendar, trash and restore, interfa
 
 This is a local, single-user application with no login. Do not expose it publicly or add a second user before adding authentication and ownership checks (D-029).
 For a ten-minute review, read this page, then the [documentation index](docs/README.md) and [decisions log](DECISIONS.md).
-This handover describes `origin/main` at `35fdb92`, checked on 12 November 2026.
+This handover describes `origin/main` at `9e8c412`, checked on 13 November 2026.
 
 ## Run locally
 
@@ -36,13 +36,30 @@ pnpm dev
 ```
 
 The readiness command assumes the example credentials. Wait for Postgres to accept connections before migrating.
-Open <http://localhost:3000>. Compose runs Postgres 17 on IPv4 loopback port 5433, avoiding a native Postgres on 5432.
+Compose runs Postgres 17 on IPv4 loopback port 5433, avoiding a native Postgres on 5432.
 Data persists in the `journal_data` volume. `docker compose down` stops the container without deleting that volume.
 Changing credentials does not reconfigure an existing database volume.
+
+Both `pnpm dev` and `pnpm start` bind only to `APP_HOST`, which defaults to
+`100.66.182.87`, the owner's Tailscale address. Open <http://100.66.182.87:3000>
+on this computer or a phone connected to the same Tailscale network.
+The Tailscale interface must be available when starting with the default address.
+Set `APP_HOST=127.0.0.1` in `.env` or your shell for access only on this computer:
+
+```powershell
+$env:APP_HOST = "127.0.0.1"
+pnpm dev
+```
+
+Then open <http://127.0.0.1:3000>. Browser tests set this loopback override themselves.
+The launcher loads `.env` and passes the selected address to Next.js `--hostname`.
+Use `APP_HOST` to change the address; the launcher rejects hostname CLI overrides.
 
 The one-command setup script is planned and has not been built. `scripts/with-test-database.mjs` is a test command wrapper, not a setup script.
 Schema changes use `pnpm db:generate` to create reviewable SQL in `drizzle/`, followed by `pnpm db:migrate`.
 Migration `0003` refuses to lower the old entry length limit if existing entries exceed 2,000 characters. It does not truncate writing.
+Migration `0007_cancel_unused_model_reservations` adds the `cancelled` model-call outcome and grants an existing `journal_app` role DELETE on rebuildable `journal_mistake_counts`.
+Run all committed migrations before starting an existing installation with this revision.
 
 ## Architecture and request boundaries
 
@@ -64,8 +81,10 @@ Today actions validate form fields, IDs, locales and applicable resource relatio
 
 An ordinary function in a module importing `server-only`, such as `createEntry` in `src/lib/journal/index.ts`, runs inside the server and does not itself create an HTTP endpoint.
 It may still be exposed through a calling action. Pages also call these data functions directly for reads.
-The one explicit API route is `POST /api/jev` in `src/app/api/jev/route.ts`. It checks Origin against Host, validates its JSON and journal/entry relationship, and returns a judgement or `null`.
+The one explicit API route is `POST /api/jev` in `src/app/api/jev/route.ts`. It requires Origin to match Host, returning 403 for missing or mismatched origins, and limits the streamed body to 20,000 bytes, returning 413 when exceeded.
+It validates its JSON and journal/entry relationship, and returns a judgement or `null`.
 It has no user authentication either. There is no separate REST API for journal CRUD.
+Private-interface binding and origin checks limit exposure but do not establish identity. Jev failure logs contain fixed event codes and status values rather than provider errors or learner text.
 
 This boundary guidance was checked against the bundled Next.js 16.4.6 docs and [Next.js data security guidance](https://nextjs.org/docs/app/guides/data-security).
 
@@ -87,13 +106,14 @@ The [schema](src/db/schema.ts) and [migrations](drizzle/) define eight app table
 The [shared contract](src/lib/feedback-contract.ts) caps entries at **2,000 Unicode code points**, **10 stored entries per journal**, **3 feedback requests per entry**, **3 corrections per feedback**, and **50 model calls per day**.
 An explanation has at most 200 code points. Focus is optional: New allows one choice, Basic two, Intermediate and Advanced three.
 The entry length and focus limits also have database constraints. Entry-count and call reservations use transactions and locks in the data layer.
-Soft-deleted entries still occupy slots; permanent deletion frees their slots. Feedback failures also occupy feedback request slots.
+Soft-deleted entries still occupy slots in both the form and server checks; permanent deletion frees their slots. Feedback failures occupy feedback request slots, except Jev language refusals made before a model attempt.
 
 Soft deletion marks journals and entries with `deleted_at` and hides them from normal reads. Trash can restore them.
 Restoring a journal restores its deletion batch while preserving entries trashed earlier. An entry cannot be restored while its journal is deleted.
 Hard deletion cascades to feedback, insights and category counts. Model and Jev call rows survive with nullable source references, so deletion does not reset usage limits.
-The daily model budget uses the Europe/London calendar day and includes summaries, retry/repair calls and reservations.
+The daily model budget uses the Europe/London calendar day and includes summaries, retry/repair calls and reservations, excluding cancelled unused reservations.
 See [database roles](docs/database-roles.md) for optional separate app and migration roles. Normal Compose setup does not provision or adopt them automatically.
+Current app grants allow SELECT/INSERT/UPDATE on app tables and DELETE on journals, entries and rebuildable mistake counts. Direct DELETE on model-call history remains denied; unused reservations are cancelled in place.
 
 ## Feedback and Jev
 
@@ -107,8 +127,8 @@ The prompt asks for corrected text in the target language and explanations in th
 Tone, address and gender preferences steer explanation wording. They are not intended to change which corrections are needed.
 
 The [output validator](src/lib/ai/schema.ts) checks JSON, a strict Zod object, size and category limits, nonempty single-line explanations, exact original spans, and reliably detected explanation language using `eld`.
-It does not prove pedagogical correctness or that a fix appears in the corrected full text.
-Zero corrections are allowed. The SDK adapter requests `store: false`; this flag alone does not establish the provider's complete retention policy.
+Corrected text must be nonblank, each nonempty fix must appear in it, and zero corrections require corrected text to equal the analysed text. Empty fixes represent deletions.
+These checks do not prove pedagogical correctness. The SDK adapter requests `store: false`; this flag alone does not establish the provider's complete retention policy.
 
 There is a 20-second generation timeout, at most one SDK retry and one validation repair, with at most three metered calls per feedback request.
 Each extra call needs a daily-budget reservation. Token counts are recorded when available; failures can have null counts.
@@ -135,10 +155,10 @@ Text shorter than eight trimmed characters and unchanged drafts are skipped. A l
 This judgement makes no OpenAI call. Its severity answer is logged; the badge uses the main issue.
 
 Before saved text reaches the feedback model, a separate Jev question classifies its meaning in the target language.
-Standard, informal and meaningful mixed text pass. Formula-only, encoded, random and other-language text are refused, releasing the unused model reservation.
-The failed feedback request still occupies a request slot. The gate does not impose a confidence threshold.
+Standard, informal and meaningful mixed text pass. Formula-only, encoded, random and other-language text are refused when classification confidence is at least 0.5.
+The unused model reservation is marked `cancelled` and kept for audit, outside the daily model budget. A refusal with zero model attempts does not occupy a feedback request slot.
 Jev has a three-second timeout and a separate 200-check daily cap, shared by judgements and language gates.
-An unavailable, invalid or capped check allows feedback to proceed. This is a best-effort gate, not a guarantee that all non-language text is blocked.
+An unavailable, invalid, low-confidence or capped check allows feedback to proceed. This is a best-effort gate, not a guarantee that all non-language text is blocked.
 Both roles use `jev-latest` via the server adapter.
 
 ## Stage 2 approach
@@ -185,11 +205,14 @@ pnpm test:e2e
 
 Integration and browser setup create the test database if absent, apply committed migrations, then truncate its public tables before and after the suite.
 Migration history remains. The first run needs a database user allowed to create the test database.
+Both suites load `DATABASE_URL` and `TEST_DATABASE_URL` from the environment or `.env`; the example test URL targets `journal_test` on localhost port 5433.
+Restricted-role integration tests also create temporary roles, switch roles and transfer test-table ownership. The default Docker user supports these operations.
+They exercise the shipped grants with unique role names in the test database and remove the roles at teardown.
 The URL guard requires a separate database ending in `_test`, on the same host/port, with no query or fragment overrides.
 Run database suites one at a time. They share the test database.
 
 Playwright starts its own production build/server on port 3100 and refuses an existing server.
-It passes `TEST_DATABASE_URL` as the app's `DATABASE_URL`, enables fake providers and blanks both provider keys.
+It passes `TEST_DATABASE_URL` as the app's `DATABASE_URL`, sets `APP_HOST=127.0.0.1`, enables fake providers and blanks both provider keys.
 On PowerShell, `$env:PLAYWRIGHT_DEV_SERVER = '1'` selects the optional dev server on port 3117 instead. Clear it to return to production mode.
 
 Live flags are `RUN_LIVE_AI=1` (two feedback calls), `RUN_STAGE2_LIVE=1` (six Jev checks and three summaries), and `RUN_JEV_GATE_LIVE=1` (six language-gate checks).
@@ -235,5 +258,5 @@ The [decisions log](DECISIONS.md) explains alternatives and superseding choices.
 8. The historical Stage 1 HTML contains old 5,000-character limits and future-action descriptions; use the current code and this README for implemented behaviour.
 9. Feedback uses in-process post-response work, without a durable queue or an automatic stale-pending recovery worker.
 10. Summary language and three-sentence quality are prompt requirements; code only checks completion, nonblank output and length.
-11. The ten-entry UI gate counts visible entries, while the server also counts trash; the form can appear available before the server rejects a full journal.
+11. Trashed entries still occupy the ten-entry allowance; both the UI and server enforce this, so permanent deletion is needed to free a slot.
 12. The feedback response has no assumed-level field, although D-018 proposed showing one; the prompt receives the journal's level.

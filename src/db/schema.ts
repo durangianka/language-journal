@@ -137,7 +137,9 @@ export const modelCalls = pgTable(
     entryId: uuid("entry_id").references(() => entries.id, { onDelete: "set null" }),
     journalId: uuid("journal_id").references(() => journals.id, { onDelete: "set null" }),
     kind: text("kind", { enum: ["analysis", "retry", "repair", "insight"] }).notNull(),
-    outcome: text("outcome", { enum: ["reserved", "running", "ready", "failed"] }).notNull(),
+    outcome: text("outcome", {
+      enum: ["reserved", "running", "ready", "failed", "cancelled"],
+    }).notNull(),
     reasonCode: text("reason_code", { enum: FEEDBACK_REASONS }),
     durationMs: integer("duration_ms"),
     inputTokens: integer("input_tokens"),
@@ -156,7 +158,7 @@ export const modelCalls = pgTable(
     ),
     check(
       "model_calls_outcome_valid",
-      sql`${t.outcome} in ('reserved', 'running', 'ready', 'failed')`,
+      sql`${t.outcome} in ('reserved', 'running', 'ready', 'failed', 'cancelled')`,
     ),
   ],
 );

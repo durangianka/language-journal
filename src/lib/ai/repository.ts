@@ -23,7 +23,8 @@ type Transaction = Parameters<Parameters<typeof db.transaction>[0]>[0];
 export async function hasDailyRoom(tx: Transaction) {
   await tx.execute(sql`select pg_advisory_xact_lock(6142801)`);
   const [row] = await tx.select({ total: count() }).from(modelCalls).where(sql`
-    ${modelCalls.createdAt} >= (date_trunc('day', clock_timestamp() at time zone 'Europe/London') at time zone 'Europe/London')
+    ${modelCalls.outcome} <> 'cancelled'
+    and ${modelCalls.createdAt} >= (date_trunc('day', clock_timestamp() at time zone 'Europe/London') at time zone 'Europe/London')
     and ${modelCalls.createdAt} < ((date_trunc('day', clock_timestamp() at time zone 'Europe/London') + interval '1 day') at time zone 'Europe/London')
   `);
   return row.total < dailyCallCap;
@@ -75,7 +76,12 @@ export async function beginFeedback(
     const [requests] = await tx
       .select({ total: count() })
       .from(feedback)
-      .where(eq(feedback.entryId, entryId));
+      .where(
+        and(
+          eq(feedback.entryId, entryId),
+          sql`not (${feedback.reasonCode} is not distinct from 'not_language_text' and ${feedback.attempts} = 0)`,
+        ),
+      );
     if (requestLimit(requests.total, 0)) throw new FeedbackRequestError("entry_limit_reached");
     if (!(await hasDailyRoom(tx))) throw new FeedbackRequestError("daily_cap_reached");
     const [record] = await tx
@@ -112,8 +118,15 @@ export async function refuseNonLanguageFeedback(job: FeedbackJob) {
       .for("update");
     if (!pending) return;
     const released = await tx
-      .delete(modelCalls)
-      .where(and(eq(modelCalls.id, job.callId), eq(modelCalls.outcome, "reserved")))
+      .update(modelCalls)
+      .set({ outcome: "cancelled", reasonCode: "not_language_text" })
+      .where(
+        and(
+          eq(modelCalls.id, job.callId),
+          eq(modelCalls.feedbackId, job.id),
+          eq(modelCalls.outcome, "reserved"),
+        ),
+      )
       .returning({ id: modelCalls.id });
     if (!released.length) return;
     await tx

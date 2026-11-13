@@ -48,10 +48,27 @@ test("strict validation accepts exact repeated spans and zero corrections", () =
   expect(
     validateFeedback(
       JSON.stringify({ corrected_text: "😀".repeat(2000), corrections: [] }),
-      "Hi",
+      "😀".repeat(2000),
       "en",
     ).corrections,
   ).toEqual([]);
+});
+test.each(["", "  \n\t", "Unrelated replacement text."])(
+  "rejects blank or changed corrected text with zero corrections: %j",
+  (corrected_text) => {
+    expect(() =>
+      validateFeedback(JSON.stringify({ corrected_text, corrections: [] }), "Keep my text.", "en"),
+    ).toThrow("invalid_schema");
+  },
+);
+test("rejects a listed fix missing from corrected text", () => {
+  expect(() =>
+    validateFeedback(
+      JSON.stringify({ ...good, corrected_text: "I stayed home." }),
+      "I goed home.",
+      "en",
+    ),
+  ).toThrow("invalid_span");
 });
 test.each([
   ["invalid_json", "{"],

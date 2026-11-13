@@ -286,13 +286,13 @@ test("ten-entry cap blocks creation and the server preserves the cap after soft 
   await expect(page).toHaveURL(new RegExp(`/journals/${journalId}\\?deleted=entry-soft$`));
   await expect(page.getByRole("status")).toHaveText(dictionaries.en.entryMovedToTrash);
   await expect(page.locator("main:visible li")).toHaveCount(9);
-  await expect(page.getByRole("link", { name: "New entry", exact: true })).toBeVisible();
+  await expect(page.getByRole("link", { name: "New entry", exact: true })).toHaveCount(0);
+  await expect(page.getByText(dictionaries.en.journalEntryLimitReached)).toBeVisible();
   await page.reload();
   await expect(page.locator("main:visible li")).toHaveCount(9);
   await page.goto(`/journals/${journalId}/entries/new`);
-  await page.getByLabel("Your entry", { exact: true }).fill("Another entry.");
-  await page.getByRole("button", { name: "Save entry", exact: true }).tap();
-  await expect(page.locator("#form-error")).toHaveText(dictionaries.en.journalFull);
+  await expect(page.getByText(dictionaries.en.journalEntryLimitReached)).toBeVisible();
+  await expect(page.getByLabel("Your entry", { exact: true })).toHaveCount(0);
   await page.goto(detail());
   await expect(
     page.getByRole("heading", { name: dictionaries.en.journalNotFound, exact: true }),

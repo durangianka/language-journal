@@ -11,6 +11,38 @@ const inputSchema = z.object({
   text: z.string().refine((s) => Array.from(s).length <= 2000),
 });
 
+const maxBodyBytes = 20_000;
+class BodyTooLarge extends Error {}
+
+async function readJson(request: Request): Promise<unknown> {
+  if (Number(request.headers.get("content-length")) > maxBodyBytes) throw new BodyTooLarge();
+  if (!request.body) return JSON.parse("");
+  const reader = request.body.getReader();
+  const chunks: Uint8Array[] = [];
+  let bytes = 0;
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      bytes += value.byteLength;
+      if (bytes > maxBodyBytes) {
+        await reader.cancel().catch(() => {});
+        throw new BodyTooLarge();
+      }
+      chunks.push(value);
+    }
+  } finally {
+    reader.releaseLock();
+  }
+  const body = new Uint8Array(bytes);
+  let offset = 0;
+  for (const chunk of chunks) {
+    body.set(chunk, offset);
+    offset += chunk.byteLength;
+  }
+  return JSON.parse(new TextDecoder().decode(body));
+}
+
 export async function POST(request: Request) {
   try {
     // Route Handlers do not inherit Server Action origin checks.
@@ -19,9 +51,7 @@ export async function POST(request: Request) {
     // Compare the browser origin against the incoming Host, as Server Actions do.
     if (!origin || !URL.canParse(origin) || new URL(origin).host !== request.headers.get("host"))
       return Response.json(null, { status: 403 });
-    if (Number(request.headers.get("content-length")) > 20_000)
-      return Response.json(null, { status: 413 });
-    const input = inputSchema.parse(await request.json());
+    const input = inputSchema.parse(await readJson(request));
     if (!(await getJournal(input.journalId))) return Response.json(null);
     if (input.entryId) {
       const entry = await getEntry(input.entryId);
@@ -37,10 +67,8 @@ export async function POST(request: Request) {
       ),
     );
   } catch (error) {
-    console.error("Jev route failed", {
-      error,
-      stack: error instanceof Error ? error.stack : undefined,
-    });
+    if (error instanceof BodyTooLarge) return Response.json(null, { status: 413 });
+    console.error("jev_route_failed", { status: 200 });
     return Response.json(null);
   }
 }
