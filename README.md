@@ -66,6 +66,14 @@ $env:APP_HOST = "100.x.y.z"
 pnpm dev
 ```
 
+## Screenshots
+
+![Home page, desktop](docs/screenshots/current/home-desktop.png)
+
+| Writing                                                  | Feedback, desktop                                          | Feedback, phone                                                     |
+| -------------------------------------------------------- | ---------------------------------------------------------- | ------------------------------------------------------------------- |
+| ![Writing](docs/screenshots/current/writing-desktop.png) | ![Feedback](docs/screenshots/current/feedback-desktop.png) | ![Feedback on a phone](docs/screenshots/current/feedback-phone.png) |
+
 ## Architecture
 
 ```mermaid
@@ -82,6 +90,12 @@ flowchart LR
 - **Feedback** uses OpenAI `gpt-6-luna` through the Vercel AI SDK with structured JSON output. Every response is validated with Zod before it is saved: JSON shape, exact quoted spans, category values, and the language of the explanations (checked with `eld`).
 - **Jev (TypeSafe)** judges whether text is real language before it reaches the feedback model, and gives a quick main-issue check while typing.
 - **UI:** Tailwind CSS and shadcn/ui, designed mobile first.
+
+### Single-page behaviour
+
+The brief asks for a single-page application. This is a Next.js app with server-rendered first pages and client components for the interactive parts (writing, feedback status, settings). After the first load, navigation and form submissions happen in the browser without full page reloads, so the learner experiences it as an SPA.
+
+It is not a separate frontend talking to a separate API. I chose one deployable unit so that database access and API keys stay on the server, and there is no API layer to keep in sync. The trade-off is that the first page load is server-rendered, and a strict reading of the brief would count this as a deviation.
 
 ## Key decisions and trade-offs
 
@@ -132,14 +146,16 @@ pnpm test:e2e                          # browser tests at phone and desktop widt
 
 ## Documentation map
 
-| Where                                                          | What it is for                                                 |
-| -------------------------------------------------------------- | -------------------------------------------------------------- |
-| `README.md`                                                    | This page: setup, architecture, limits                         |
-| `DECISIONS.md`                                                 | Each design question, the choice, the reason and the trade-off |
-| `docs/database-roles.md`                                       | Optional least-privilege database roles                        |
-| `docs/stage2-live-results.md`, `docs/jev-gate-live-results.md` | Recorded samples from live provider calls                      |
-| `scripts/`                                                     | Setup and test helpers                                         |
-| `drizzle/`                                                     | Database migrations                                            |
+| Where                                                          | What it is for                                                            |
+| -------------------------------------------------------------- | ------------------------------------------------------------------------- |
+| `README.md`                                                    | This page: setup, architecture, limits                                    |
+| `DECISIONS.md`                                                 | Each design question, the choice, the reason and the trade-off            |
+| `docs/research/shorthand-reference.md`                         | Research behind the informal-language examples used by the language check |
+| `docs/database-roles.md`                                       | Optional least-privilege database roles                                   |
+| `docs/stage2-live-results.md`, `docs/jev-gate-live-results.md` | Recorded samples from live provider calls                                 |
+| `docs/screenshots/current/`                                    | Four screenshots used above                                               |
+| `scripts/`                                                     | Setup and test helpers                                                    |
+| `drizzle/`                                                     | Database migrations                                                       |
 
 ## Limits
 

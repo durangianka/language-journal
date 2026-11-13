@@ -4,7 +4,7 @@ Run: 2026-11-12T11:49:59.487Z. Database: journal_test only. Target language per 
 Credentials loaded by dotenv without inspecting or printing .env contents.
 Six calls through the existing Jev client, timeout, reservation and call log. No feedback model imported or invoked.
 Request shape unchanged: POST /v1/systemone with { model, state, questions }; choice criteria is an object.
-Shorthand examples use only verified items from origin/research/shorthand:out/report.md. Register by level is app policy inferred from the research, not a CEFR rule.
+Shorthand examples use only verified items from docs/research/shorthand-reference.md. Register by level is app policy inferred from the research, not a CEFR rule.
 
 Input (es): Ayer fui al mercado y compré fruta fresca para preparar la cena.
 Expected: standard_language. Allowed: true.

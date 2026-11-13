@@ -25,7 +25,7 @@ test.skipIf(process.env.RUN_JEV_GATE_LIVE !== "1")(
       "Credentials loaded by dotenv without inspecting or printing .env contents.",
       "Six calls through the existing Jev client, timeout, reservation and call log. No feedback model imported or invoked.",
       "Request shape unchanged: POST /v1/systemone with { model, state, questions }; choice criteria is an object.",
-      "Shorthand examples use only verified items from origin/research/shorthand:out/report.md. Register by level is app policy inferred from the research, not a CEFR rule.",
+      "Shorthand examples use only verified items from docs/research/shorthand-reference.md. Register by level is app policy inferred from the research, not a CEFR rule.",
       "",
     ];
     let correct = 0;
