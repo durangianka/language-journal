@@ -8,6 +8,7 @@ import {
   type JevQuestions,
 } from "./contract";
 import type { Locale } from "../../config/locales";
+import { JevHttpError } from "./errors";
 
 export interface JevClient {
   judge(text: string, signal: AbortSignal, questions?: JevQuestions): Promise<unknown>;
@@ -41,7 +42,9 @@ export async function checkEntryLanguage(
   store: JevStore,
 ): Promise<boolean> {
   const answers = await queryEntry(text, entryId, client, store, feedbackJevQuestions(language));
-  const kind = answers?.text_kind?.choice;
+  const classification = answers?.text_kind;
+  if (!classification || classification.confidence < 0.5) return true;
+  const kind = classification.choice;
   return !kind || !["formula_or_numbers", "encoded", "random", "other_language"].includes(kind);
 }
 
@@ -72,16 +75,15 @@ async function queryEntry(
     answers = ("text_kind" in questions ? feedbackJevAnswersSchema : jevAnswersSchema).parse(raw);
     return answers;
   } catch (error) {
-    console.error("Jev check failed", {
-      error,
-      stack: error instanceof Error ? error.stack : undefined,
+    console.error("jev_check_failed", {
+      status: error instanceof JevHttpError ? error.status : 500,
     });
     return null;
   } finally {
     clearTimeout(timer);
     if (id)
-      await store.finish(id, answers, Date.now() - start).catch((error) => {
-        console.error("Jev call log failed", error);
+      await store.finish(id, answers, Date.now() - start).catch(() => {
+        console.error("jev_call_log_failed", { status: 500 });
       });
   }
 }

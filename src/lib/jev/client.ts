@@ -1,6 +1,7 @@
 import "server-only";
 import { jevQuestions } from "./contract";
 import type { JevClient } from "./service";
+import { JevHttpError } from "./errors";
 
 export const jevModel = "jev-latest";
 export const jevEndpoint = "https://api.typesafe.ai/v1/systemone";
@@ -15,7 +16,7 @@ export const jevClient: JevClient = {
       signal,
       cache: "no-store",
     });
-    if (!response.ok) throw new Error(`Jev request failed (${response.status})`);
+    if (!response.ok) throw new JevHttpError(response.status);
     const result = await response.json();
     return result.answers;
   },
