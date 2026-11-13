@@ -1,4 +1,4 @@
-// Verified examples from origin/research/shorthand:out/report.md.
+// Verified examples from docs/research/shorthand-reference.md.
 // These are context clues, not automatic replacements. Ambiguity needs surrounding text.
 export const verifiedShorthand = {
   it: {
@@ -41,7 +41,7 @@ export const verifiedShorthand = {
 
 import type { Locale } from "./locales";
 
-// Only verified items from origin/research/shorthand:out/report.md.
+// Only verified items from docs/research/shorthand-reference.md.
 // These are contextual examples, not a dictionary or an exhaustive allowlist.
 export const verifiedShorthandExamples: Record<Locale, string> = {
   it: "x = per; xké = perché; + = più; 6 = sei; cmq = comunque; nn = non; tt = tutto; anke = anche; ke = che; TVB = ti voglio bene; international chat initialisms LOL, ASAP, IMHO.",
