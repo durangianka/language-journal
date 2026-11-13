@@ -52,7 +52,8 @@ export async function POST(request: Request) {
     if (!origin || !URL.canParse(origin) || new URL(origin).host !== request.headers.get("host"))
       return Response.json(null, { status: 403 });
     const input = inputSchema.parse(await readJson(request));
-    if (!(await getJournal(input.journalId))) return Response.json(null);
+    const journal = await getJournal(input.journalId);
+    if (!journal) return Response.json(null);
     if (input.entryId) {
       const entry = await getEntry(input.entryId);
       if (!entry || entry.journalId !== input.journalId) return Response.json(null);
@@ -64,6 +65,7 @@ export async function POST(request: Request) {
         input.entryId ?? null,
         process.env.JEV_TEST_MODE === "1" ? testJevClient : jevClient,
         jevStore,
+        journal.language,
       ),
     );
   } catch (error) {
